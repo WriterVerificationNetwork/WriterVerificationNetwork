@@ -1,0 +1,4 @@
+
+INPUT_DATA_DIRNAME = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_20210824"
+GT_DATA_DIRNAME = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_20210824_ground_truth"
+GT_DENOISING_DATA_DIRNAME = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_20210824_ground_truth_denoising"
