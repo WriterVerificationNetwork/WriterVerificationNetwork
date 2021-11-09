@@ -6,7 +6,7 @@ from PIL import Image, ImageOps
 from skimage.filters import threshold_otsu
 
 
-from dataset.utils import INPUT_DATA_DIRNAME, GT_DENOISING_DATA_DIRNAME
+from dataset.utils import ORIGINAL_FOLDER_DIR, GT_DENOISING_DATA_DIRNAME, bincount_app
 
 test_file_02 = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_20210824/α/α_60215_bt1_Iliad.9.186.15.png"
 test_file_01 = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_20210824/α/α_60215_bt1_Iliad.9.181.5.png"
@@ -16,7 +16,7 @@ test_file_05 = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_
 
 
 def create_ground_truth():
-    for root, dirs, files in os.walk(INPUT_DATA_DIRNAME):
+    for root, dirs, files in os.walk(ORIGINAL_FOLDER_DIR):
         for file in files:
             if file != ".DS_Store" and "602014" not in file:
                 try:
@@ -26,15 +26,6 @@ def create_ground_truth():
                     cv2.imwrite(os.path.join(GT_DENOISING_DATA_DIRNAME, file[0], file), thresh)
                 except Exception:
                     print(file)
-
-
-# function get dominant color
-def bincount_app(image_array):
-    a2D = image_array.reshape(-1, image_array.shape[-1])
-    col_range = (256, 256, 256)  # generically : a2D.max(0)+1
-    a1D = np.ravel_multi_index(a2D.T, col_range)
-    return np.unravel_index(np.bincount(a1D).argmax(), col_range)
-
 
 
 def binarize_image_Otsu_denoise(image_path):
@@ -67,10 +58,11 @@ def binarize_image_Otsu_denoise(image_path):
     thresh = cv2.threshold(blur, 100, 255, cv2.THRESH_BINARY)[1]
     return thresh
 
+ground_truth_folder_dir = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_binarization/good"
 
 
 if __name__ == "__main__":
-    # create_ground_truth()
+    create_ground_truth()
 
-    thresh = binarize_image_Otsu_denoise(test_file_03)
-    cv2.imwrite("test_denoise_03_0.png", thresh)
+
+
