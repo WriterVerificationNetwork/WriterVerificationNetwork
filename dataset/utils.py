@@ -1,11 +1,16 @@
 import numpy as np
 from PIL import Image
 
-GT_DATA_DIRNAME = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_20210824_ground_truth"
-GT_DENOISING_DATA_DIRNAME = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_20210824_ground_truth_denoising"
+
 
 ORIGINAL_FOLDER_DIR = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_20210824"
-GROUND_TRUTH_FOLDER_DIR = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_binarization/good"
+GT_DENOISING_DATA_DIRNAME = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_20210824_ground_truth_denoising"
+GROUND_TRUTH_FOLDER_DIR = "/Users/hongtruong/Documents/Collaboration_Basel_Bordeaux/bt1_by_letters_binarization"
+
+GOOD_GT_DATA_DIRNAME = GROUND_TRUTH_FOLDER_DIR + "/good"
+AVERAGE_GT_DATA_DIRNAME = GROUND_TRUTH_FOLDER_DIR + "/average"
+BAD_GT_DATA_DIRNAME = GROUND_TRUTH_FOLDER_DIR + "/bad"
+
 
 MAX_WIDTH = 232
 MAX_HEIGHT = 308

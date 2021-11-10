@@ -1,7 +1,7 @@
 import os
 
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image
 from torch.utils.data import Dataset
 
 from dataset.utils import MAX_WIDTH, MAX_HEIGHT, bincount_app, resize_image
@@ -32,9 +32,11 @@ class ImagePairFolder(Dataset):
                     except Exception:
                         print(file)
 
-        # Generate image pair
-        self.image_pair_list = [(a, b) for idx, a in enumerate(self.image_list) for b in self.image_list[idx + 1:]
+        # Generate image pair from the same author
+        self.image_pair_list = [(a, b, 1) for idx, a in enumerate(self.image_list) for b in self.image_list[idx + 1:]
                                 if a["TM"] == b["TM"] and a["letter"] == b["letter"]]
+
+        # Generate image pair from the different authors
 
     def __getitem__(self, idx):
         # Get first image and its ground truth
@@ -55,7 +57,7 @@ class ImagePairFolder(Dataset):
                                                       self.image_pair_list[idx][1]["file_name"]),
                                          self.data_transform, "4")
 
-        return first_img_tensor, first_img_gt_tensor, second_img_tensor, second_img_gt_tensor
+        return first_img_tensor, first_img_gt_tensor, second_img_tensor, second_img_gt_tensor, self.image_pair_list[idx][2]
 
     def __len__(self) -> int:
         return len(self.image_list)
