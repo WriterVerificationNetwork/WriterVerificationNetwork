@@ -15,7 +15,7 @@ pip install -r requirements.txt
 ### Prepare data
 ```shell
 cd /path/to/datasets
-wget https://drive.switch.ch/index.php/s/zXcd2r50H4CbRzH/download?path=%2F&files=bt1_by_letters_20210824.zip
+wget bt1_by_letters_20210824.zip (Link will be updated later)
 unzip bt1_by_letters_20210824.zip
 
 
@@ -26,6 +26,9 @@ python3 dataset/create_ground_truth.py
 # A popop appears show the original and binarized image, press "0", "1" or "2" if the binarzed image is good, average or bad compared to the original image. 
 # Then the binarized images are saved into the according dataset folders.
 # In this project, only good binarized images are used to train the model.
+
+# A binarization image folder can be downloaded from: https://drive.google.com/drive/folders/1CkhTw4DvcdocvAVP_C6Mknaw80Dt07IA?usp=sharing
+
 
 # Generating image pairs from the same author
 
