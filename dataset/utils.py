@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from PIL import Image
 
 
@@ -12,8 +13,18 @@ AVERAGE_GT_DATA_DIRNAME = GROUND_TRUTH_FOLDER_DIR + "/average"
 BAD_GT_DATA_DIRNAME = GROUND_TRUTH_FOLDER_DIR + "/bad"
 
 
-MAX_WIDTH = 232
-MAX_HEIGHT = 308
+def map_location(cuda):
+    if torch.cuda.is_available() and cuda:
+        map_location=lambda storage, loc: storage.cuda()
+    else:
+        map_location='cpu'
+
+
+def rename(newname):
+    def decorator(f):
+        f.__name__ = newname
+        return f
+    return decorator
 
 
 # function get dominant color

@@ -5,3 +5,4 @@ opencv-python~=4.2.0.32
 scikit-image~=0.17.2
 torchvision~=0.10.0
 torchinfo~=1.5.3
+wandb~=0.12.4

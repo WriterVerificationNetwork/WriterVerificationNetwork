@@ -4,18 +4,19 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 
-from dataset.utils import MAX_WIDTH, MAX_HEIGHT, bincount_app, resize_image
+from dataset.utils import bincount_app, resize_image
+
+MAX_WIDTH = 232
+MAX_HEIGHT = 308
 
 
 class ImagePairFolder(Dataset):
 
-    def __init__(self, original_folder_dir, ground_truth_folder_dir, data_transform, max_img_w, max_img_h):
+    def __init__(self, original_folder_dir, ground_truth_folder_dir, data_transform):
         # Init folder dir
         self.original_folder_dir = original_folder_dir
         self.ground_truth_folder_dir = ground_truth_folder_dir
         self.data_transform = data_transform
-        self.max_img_w = max_img_w
-        self.max_img_h = max_img_h
 
         # Create image item
         self.image_list = []

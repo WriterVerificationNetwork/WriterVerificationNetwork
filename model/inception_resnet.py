@@ -5,7 +5,7 @@ from torch import nn
 
 class WriterVerificationNetwork(InceptionResnetV1):
 
-    def __init__(self, numb_symbols, device, dropout=0.5):
+    def __init__(self, numb_symbols, device, tasks, dropout=0.5):
         """
         The aim of this class is to modify the forward method, for extracting the embedding features
         Without having to modify the original class
@@ -55,11 +55,13 @@ class WriterVerificationNetwork(InceptionResnetV1):
             nn.ReLU(),
             nn.BatchNorm1d(1024),
             nn.Linear(1024, 512, bias=False),
-            nn.BatchNorm1d(512),
-            nn.Dropout(p=0.3)
+            nn.BatchNorm1d(512)
         )
-        self.writer_footprint_bn = nn.BatchNorm1d(640)
+        self.symbol_footprint_projection = nn.Linear(640, 512)
+        self.writer_footprint_bn = nn.BatchNorm1d(512)
         self.to(device)
+
+        self._tasks = tasks
 
     def forward(self, x):
         x = self.conv2d_1a(x)
@@ -73,11 +75,15 @@ class WriterVerificationNetwork(InceptionResnetV1):
         x = self.mixed_6a(x)
         x = self.repeat_2(x)
 
-        # Binary image reconstructing
-        reconstructing = self.up_scaling_1(x)
-        reconstructing = self.up_scaling_2(reconstructing)
-        reconstructing = self.up_scaling_3(reconstructing)
-        reconstructing = self.final_reconstruct(reconstructing)
+        results = {}
+
+        if 'reconstruct' in self._tasks:
+            # Binary image reconstructing
+            reconstructing = self.up_scaling_1(x)
+            reconstructing = self.up_scaling_2(reconstructing)
+            reconstructing = self.up_scaling_3(reconstructing)
+            reconstructing = self.final_reconstruct(reconstructing)
+            results['reconstruct'] = reconstructing
 
         # Dimension reduction
         x = self.mixed_7a(x)
@@ -88,21 +94,30 @@ class WriterVerificationNetwork(InceptionResnetV1):
         x = x.view(x.shape[0], -1)
 
         # Symbol recognizing
-        symbol_embedding = self.symbol_embedding(x)
-        symbol = self.final_symbol(symbol_embedding)
-        symbol_embedding_proj = self.symbol_embedding_projection(symbol_embedding)
+
+        if 'symbol' in self._tasks:
+            symbol_embedding = self.symbol_embedding(x)
+            symbol = self.final_symbol(symbol_embedding)
+            results['symbol'] = symbol
 
         # Writer footprint declaration
-        footprint = self.writer_footprint(x)
-        footprint = torch.cat([footprint, symbol_embedding_proj], dim=1)
-        footprint = self.writer_footprint_bn(footprint)
 
-        return reconstructing, symbol, footprint
+        if 'footprint' in self._tasks:
+            footprint = self.writer_footprint(x)
+
+            if 'symbol' in self._tasks:
+                symbol_embedding_proj = self.symbol_embedding_projection(symbol_embedding)
+                footprint = torch.cat([footprint, symbol_embedding_proj], dim=1)
+                footprint = self.symbol_footprint_projection(footprint)
+            footprint = self.writer_footprint_bn(footprint)
+            results['footprint'] = footprint
+
+        return results
 
 
 if __name__ == '__main__':
     from torchinfo import summary
     device = torch.device('cpu')
-    model = WriterVerificationNetwork(numb_symbols=24, device=device)
+    model = WriterVerificationNetwork(numb_symbols=24, device=device, tasks=[])
     batch_size = 10
     summary(model, input_size=(batch_size, 3, 160, 160), device=device)
