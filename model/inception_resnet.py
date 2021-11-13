@@ -15,13 +15,13 @@ class WriterVerificationNetwork(InceptionResnetV1):
         super().__init__(classify=False, device=device, num_classes=1, dropout_prob=dropout)
 
         self.up_scaling_1 = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=896, padding=1, out_channels=128, kernel_size=(4, 4), stride=2),
+            nn.ConvTranspose2d(in_channels=896, padding=1, out_channels=256, kernel_size=(4, 4), stride=2),
             nn.ReLU(),
-            nn.BatchNorm2d(128)
+            nn.BatchNorm2d(256)
         )
 
         self.up_scaling_2 = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=128, padding=1, out_channels=64, kernel_size=(4, 4), stride=2),
+            nn.ConvTranspose2d(in_channels=256, padding=1, out_channels=64, kernel_size=(4, 4), stride=2),
             nn.ReLU(),
             nn.BatchNorm2d(64)
         )
