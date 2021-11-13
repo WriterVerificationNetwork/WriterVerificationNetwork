@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 from PIL import Image
 
 
@@ -12,12 +11,11 @@ GOOD_GT_DATA_DIRNAME = GROUND_TRUTH_FOLDER_DIR + "/good"
 AVERAGE_GT_DATA_DIRNAME = GROUND_TRUTH_FOLDER_DIR + "/average"
 BAD_GT_DATA_DIRNAME = GROUND_TRUTH_FOLDER_DIR + "/bad"
 
+letters = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'ϲ', 'τ', 'υ', 'φ',
+           'χ', 'ψ', 'ω']
 
-def map_location(cuda):
-    if torch.cuda.is_available() and cuda:
-        map_location=lambda storage, loc: storage.cuda()
-    else:
-        map_location='cpu'
+letter_to_idx = {x: i for i, x in enumerate(letters)}
+idx_to_letter = {i: x for i, x in enumerate(letters)}
 
 
 def rename(newname):

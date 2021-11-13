@@ -18,7 +18,6 @@ class BaseOptions:
         self._parser.add_argument('--optimizer', type=str, default='Adam')
         self._parser.add_argument('--cuda', action='store_true', help="Whether to use GPU")
         self._parser.add_argument('--network', type=str, default='wvn_inception')
-        self._parser.add_argument('--n_symbols', type=int, default=24, help='Number of symbols')
         self._parser.add_argument('--save_freq_s', type=int, default=50,
                                   help='save the training losses to the summary writer every # seconds.')
         self._parser.add_argument('--n_threads_train', default=4, type=int, help='# threads for loading data')
@@ -27,6 +26,8 @@ class BaseOptions:
                                   help='name of the experiment. It decides where to store samples and models')
         self._parser.add_argument('--name', type=str, default='experiment_1',
                                   help='name of the experiment. It decides where to store samples and models')
+        self._parser.add_argument('--wb_entity', type=str, default='glmanhtu', help='Wandb entity name')
+        self._parser.add_argument('--wb_project', type=str, default='writer-verification-network', help='Wandb project')
         self._parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
         self._parser.add_argument('--lr', type=float, default=1e-3,
                                   help="The initial learning rate")

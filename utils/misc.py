@@ -1,3 +1,6 @@
+import torch
+
+
 class EarlyStop:
 
     def __init__(self, n_epochs):
@@ -15,3 +18,10 @@ class EarlyStop:
         if len(self.losses) - best_loss_pos <= self.n_epochs:
             return False
         return True
+
+
+def map_location(cuda):
+    if torch.cuda.is_available() and cuda:
+        map_location=lambda storage, loc: storage.cuda()
+    else:
+        map_location='cpu'

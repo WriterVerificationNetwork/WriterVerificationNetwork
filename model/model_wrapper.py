@@ -1,13 +1,11 @@
 import os
 import statistics
-from collections import OrderedDict
-from copy import copy
 
 import numpy as np
 import torch
 
 from criterions.optim import Optimizer, Scheduler, Criterion
-from dataset.utils import map_location
+from utils.misc import map_location
 
 
 class ModelWrapper:
@@ -136,7 +134,7 @@ class ModelWrapper:
         with torch.set_grad_enabled(self._is_train):
             output = self._model(input_image)
         for t in [x for x in self._args.tasks if x != 'footprint']:
-            label = batch_data[t]
+            label = batch_data[t].to(self._device, non_blocking=True)
             criterion_task = self._criterions_per_task['Train'][t]
             loss_task = criterion_task(output[t], label)
             train_dict['loss_' + t] = loss_task.item()

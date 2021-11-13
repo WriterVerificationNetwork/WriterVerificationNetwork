@@ -1,3 +1,4 @@
+from dataset import utils
 from model.inception_resnet import WriterVerificationNetwork
 from model.model_wrapper import ModelWrapper
 
@@ -9,7 +10,7 @@ class ModelsFactory:
     @staticmethod
     def get_model(args, is_train, device, dropout=0.4):
         if args.network == 'wvn_inception':
-            model = WriterVerificationNetwork(numb_symbols=args.n_symbols, device=device, dropout=dropout,
+            model = WriterVerificationNetwork(numb_symbols=len(utils.letters), device=device, dropout=dropout,
                                               tasks=args.tasks)
         else:
             raise NotImplementedError(f'Model {args.network} haven\'t implemented yet!!!')

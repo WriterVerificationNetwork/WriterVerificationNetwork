@@ -4,14 +4,14 @@ import time
 
 import torch
 import wandb
-from torch import nn
 
 from dataset.data_loader import WriterDataLoader
 from dataset.desire_dataset import DesireDataset
-from dataset.transform import get_transforms
 from model.model_factory import ModelsFactory
 from options.train_options import TrainOptions
 from utils.misc import EarlyStop
+from utils.transform import get_transforms
+from utils.wb_utils import log_prediction
 
 args = TrainOptions().parse()
 
@@ -19,20 +19,20 @@ args = TrainOptions().parse()
 class Trainer:
     def __init__(self):
         wandb.init(group=args.group,
-                   project='writer-verification-network',
-                   entity='glmanhtu')
+                   project=args.wb_project,
+                   entity=args.wb_entity)
         wandb.run.name = args.name
         wandb.run.save()
         wandb.config.update(args)
         device = torch.device('cuda' if args.cuda else 'cpu')
         self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=0.4)
         transforms = get_transforms(args)
-        dataset_train = DesireDataset(transforms)
+        dataset_train = DesireDataset(args.gt_dir, args.gt_binarized_dir, transforms)
         self._model.init_losses('Train', args.use_weighted_loss, dataset_train)
         self.data_loader_train = WriterDataLoader(dataset_train, is_train=True, numb_threads=args.n_threads_train,
                                                   batch_size=args.batch_size)
 
-        dataset_val = DesireDataset(transforms)
+        dataset_val = DesireDataset(args.gt_dir, args.gt_binarized_dir, transforms)
         self._model.init_losses('Val', use_weighted_loss=False, dataset=dataset_val)
         self.data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                                 batch_size=args.batch_size)
@@ -75,26 +75,6 @@ class Trainer:
                 print(f'Early stop at epoch {i_epoch}')
                 break
 
-    def _log_prediction(self, wb_table, log_counter, anchor, positive, negative, symbol, anchor_out, pos_out,
-                        neg_out, n_items):
-        anchor = anchor[:n_items].cpu().numpy()
-        anchor_bin = anchor_out['reconstruct'][:n_items].cpu().numpy()
-        positive = positive[:n_items].cpu().numpy()
-        negative = negative[:n_items].cpu().numpy()
-        symbol = symbol[:n_items].cpu().numpy()
-        symbol_pred = torch.max(anchor_out['symbol'][:n_items], dim=1).indices.cpu().numpy()
-        distance_func = nn.PairwiseDistance()
-        pos_distance = distance_func(anchor_out['footprint'][:n_items], pos_out['footprint'][:n_items])
-        neg_distance = distance_func(anchor_out['footprint'][:n_items], neg_out['footprint'][:n_items])
-
-        _id = 0
-        for a, ab, p, n, s, sp, pos, neg in zip(anchor, anchor_bin, positive, negative, symbol, symbol_pred,
-                                                pos_distance, neg_distance):
-            img_id = str(_id) + "_" + str(log_counter)
-            wb_table.add_data(img_id, wandb.Image(a), wandb.Image(ab), wandb.Image(p), wandb.Image(n),
-                              s, sp, pos_distance, neg_distance)
-            _id += 1
-
     def _compute_loss(self, batch_data, log_data=False, n_log_items=10, log_counter=0):
         input_data = {
             'image': batch_data['img_anchor'],
@@ -126,9 +106,9 @@ class Trainer:
         if log_data:
             wb_table = wandb.Table(columns=['id', 'anchor', 'anchor_bin', 'positive', 'negative', 'symbol',
                                             'symbol_pred', 'pos_distance', 'neg_distance'])
-            self._log_prediction(wb_table, log_counter, batch_data['img_anchor'], batch_data['img_positive'],
-                                 batch_data['img_negative'], batch_data['symbol'],
-                                 anchor_out, pos_out, neg_out, n_items=n_log_items)
+            log_prediction(wb_table, log_counter, batch_data['img_anchor'], batch_data['img_positive'],
+                           batch_data['img_negative'], batch_data['symbol'],
+                           anchor_out, pos_out, neg_out, n_items=n_log_items)
 
         final_losses = sum(final_losses) / len(final_losses)
         log_info['loss'] = final_losses.item()

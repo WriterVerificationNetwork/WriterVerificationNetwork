@@ -1,10 +1,11 @@
+import glob
 import os
 
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 
-from dataset.utils import bincount_app, resize_image
+from dataset.utils import bincount_app, resize_image, letter_to_idx
 
 MAX_WIDTH = 232
 MAX_HEIGHT = 308
@@ -20,18 +21,14 @@ class ImagePairFolder(Dataset):
 
         # Create image item
         self.image_list = []
-        for root, dirs, files in os.walk(self.ground_truth_folder_dir):
-            for file in files:
-                if file != ".DS_Store" not in file:
-                    try:
-                        item = {
-                            "file_name": file,
-                            "letter": file[0],
-                            "TM": file.split("_")[1]
-                        }
-                        self.image_list.append(item)
-                    except Exception:
-                        print(file)
+        for img_file in glob.glob(os.path.join(ground_truth_folder_dir, '**', '*.png')):
+            letter = img_file[0]
+            item = {
+                "file_name": img_file,
+                "letter": letter_to_idx[letter],
+                "TM": img_file.split("_")[1]
+            }
+            self.image_list.append(item)
 
         # Generate image pair from the same author
         self.image_pair_list = [(a, b, 1) for idx, a in enumerate(self.image_list) for b in self.image_list[idx + 1:]
