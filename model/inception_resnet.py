@@ -29,7 +29,8 @@ class WriterVerificationNetwork(InceptionResnetV1):
         self.up_scaling_3 = nn.Sequential(
             nn.ConvTranspose2d(in_channels=64, padding=1, out_channels=32, kernel_size=(4, 4), stride=2),
             nn.ReLU(),
-            nn.BatchNorm2d(32)
+            nn.BatchNorm2d(32),
+            nn.Dropout2d(p=dropout)
         )
 
         self.final_reconstruct = nn.Conv2d(in_channels=32, out_channels=1, kernel_size=(1, 1))
@@ -39,8 +40,7 @@ class WriterVerificationNetwork(InceptionResnetV1):
             nn.ReLU(),
             nn.BatchNorm1d(512),
             nn.Linear(512, 256),
-            nn.BatchNorm1d(256),
-            nn.Dropout(p=0.3)
+            nn.BatchNorm1d(256)
         )
 
         self.symbol_embedding_projection = nn.Sequential(
@@ -54,6 +54,7 @@ class WriterVerificationNetwork(InceptionResnetV1):
             nn.Linear(1792, 1024),
             nn.ReLU(),
             nn.BatchNorm1d(1024),
+            nn.Dropout(p=dropout),
             nn.Linear(1024, 512, bias=False),
             nn.BatchNorm1d(512)
         )
@@ -90,14 +91,14 @@ class WriterVerificationNetwork(InceptionResnetV1):
         x = self.repeat_3(x)
         x = self.block8(x)
         x = self.avgpool_1a(x)
-        x = self.dropout(x)
+        # x = self.dropout(x)
         x = x.view(x.shape[0], -1)
 
         # Symbol recognizing
 
         if 'symbol' in self._tasks:
             symbol_embedding = self.symbol_embedding(x)
-            symbol = self.final_symbol(symbol_embedding)
+            symbol = self.final_symbol(self.dropout(symbol_embedding))
             results['symbol'] = symbol
 
         # Writer footprint declaration
@@ -108,6 +109,7 @@ class WriterVerificationNetwork(InceptionResnetV1):
             if 'symbol' in self._tasks:
                 symbol_embedding_proj = self.symbol_embedding_projection(symbol_embedding)
                 footprint = torch.cat([footprint, symbol_embedding_proj], dim=1)
+                footprint = self.dropout(footprint)
                 footprint = self.symbol_footprint_projection(footprint)
             footprint = self.writer_footprint_bn(footprint)
             results['footprint'] = footprint
@@ -118,6 +120,6 @@ class WriterVerificationNetwork(InceptionResnetV1):
 if __name__ == '__main__':
     from torchinfo import summary
     device = torch.device('cpu')
-    model = WriterVerificationNetwork(numb_symbols=24, device=device, tasks=[])
+    model = WriterVerificationNetwork(numb_symbols=24, device=device, tasks=['reconstruct', 'symbol', 'footprint'])
     batch_size = 10
     summary(model, input_size=(batch_size, 3, 160, 160), device=device)

@@ -31,7 +31,7 @@ class BaseOptions:
         self._parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
         self._parser.add_argument('--lr', type=float, default=1e-3,
                                   help="The initial learning rate")
-        self._parser.add_argument('--lr_policy', type=str, default='step', choices=['step', 'cosine'])
+        self._parser.add_argument('--lr_policy', type=str, default='step', choices=['step'])
         self._parser.add_argument('--lr_decay_epochs', type=int, default=3,
                                   help='reduce the lr to 0.1*lr for every # epochs')
         self._parser.add_argument('--weight_decay', type=float, default=0., help='weight decay')
