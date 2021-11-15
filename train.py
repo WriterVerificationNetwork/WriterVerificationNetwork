@@ -146,8 +146,11 @@ class Trainer:
         val_errors = {}
         eval_losses = {}
         data_loader = self.data_loader_val.get_dataloader()
+        log_counter, max_counter = 0, 5
         for i_train_batch, train_batch in enumerate(data_loader):
-            final_loss, log_info = self._compute_loss(train_batch, log_data=True)
+            enable_logging = True if log_counter < max_counter else False
+            final_loss, log_info = self._compute_loss(train_batch, log_data=enable_logging, log_counter=log_counter)
+            log_counter += 1
 
             # store current batch errors
             for k, v in log_info.items():
