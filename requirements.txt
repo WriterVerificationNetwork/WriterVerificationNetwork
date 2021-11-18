@@ -6,3 +6,4 @@ scikit-image~=0.17.2
 torchvision~=0.10.0
 torchinfo~=1.5.3
 wandb~=0.12.4
+openpyxl~=3.0.9
