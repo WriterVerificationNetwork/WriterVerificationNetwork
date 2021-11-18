@@ -30,18 +30,18 @@ class BaseOptions:
         self._parser.add_argument('--wb_entity', type=str, default='glmanhtu', help='Wandb entity name')
         self._parser.add_argument('--wb_project', type=str, default='writer-verification-network', help='Wandb project')
         self._parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
-        self._parser.add_argument('--lr', type=float, default=1e-3,
+        self._parser.add_argument('--lr', type=float, default=1e-5,
                                   help="The initial learning rate")
         self._parser.add_argument('--lr_policy', type=str, default='step', choices=['step'])
-        self._parser.add_argument('--lr_decay_epochs', type=int, default=3,
+        self._parser.add_argument('--lr_decay_epochs', type=int, default=15,
                                   help='reduce the lr to 0.1*lr for every # epochs')
         self._parser.add_argument('--weight_decay', type=float, default=0., help='weight decay')
         self._parser.add_argument('--tasks', type=str, default=['reconstruct', 'symbol', 'footprint'], nargs="+")
         self._parser.add_argument('--criterion', type=str, default=['mae', 'ce', 'triplet'], nargs="+")
         self._parser.add_argument('--lambda_task', type=float, default=[1, 1, 1], nargs="+")
         self._parser.add_argument('--use_weighted_loss', action='store_true', help='Enable using weighted losses')
-        self._parser.add_argument('--nepochs', type=int, default=99)
-        self._parser.add_argument('--early_stop', type=int, default=5)
+        self._parser.add_argument('--nepochs', type=int, default=200)
+        self._parser.add_argument('--early_stop', type=int, default=10)
 
         self._initialized = True
 
