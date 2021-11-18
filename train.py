@@ -60,7 +60,7 @@ class Trainer:
             val_dict = self._validate(i_epoch)
             gc.collect()
 
-            current_loss = val_dict['footprint']
+            current_loss = val_dict['loss_footprint']
             if current_loss < best_val_loss:
                 print("Footprint val loss improved, from {:.4f} to {:.4f}".format(best_val_loss, current_loss))
                 best_val_loss = current_loss
