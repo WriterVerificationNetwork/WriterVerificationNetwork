@@ -111,6 +111,7 @@ class Trainer:
             log_prediction(wb_table, log_counter, batch_data['img_anchor'], batch_data['img_positive'],
                            batch_data['img_negative'], batch_data['symbol'],
                            anchor_out, pos_out, neg_out, n_items=n_log_items)
+            wandb.log({'val_prediction': wb_table})
 
         final_losses = sum(final_losses) / len(final_losses)
         log_info['loss'] = final_losses.item()
@@ -169,7 +170,7 @@ class Trainer:
             output = "{} Validation {}: Epoch [{}] Step [{}] loss {:.4f}".format(
                 k, now_time, i_epoch, self._current_step, val_errors[k])
             print(output)
-            eval_losses[f'val/loss_{k}'] = val_errors[k]
+            eval_losses[f'val/{k}'] = val_errors[k]
 
         eval_losses[f'val/loss'] =\
             sum([self._model.normalize_lambda(t) * eval_losses[f'val/loss_{t}'] for t in args.tasks])
