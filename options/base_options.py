@@ -13,6 +13,7 @@ class BaseOptions:
     def initialize(self):
         self._parser.add_argument('--gt_dir', type=str, help='Path to ground truth images')
         self._parser.add_argument('--gt_binarized_dir', type=str, help='Path to ground truth binarized images')
+        self._parser.add_argument('--filter_file', type=str, help='Path to the negative filter file')
         self._parser.add_argument('--image_size', type=int, default=160, help='Input image size')
         self._parser.add_argument('--batch_size', type=int, default=64, help='Input batch size')
         self._parser.add_argument('--optimizer', type=str, default='Adam')

@@ -27,12 +27,14 @@ class Trainer:
         device = torch.device('cuda' if args.cuda else 'cpu')
         self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=0.4)
         transforms = get_transforms(args)
-        dataset_train = ImageDataset(args.gt_dir, args.gt_binarized_dir, transforms)
+        dataset_train = ImageDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
+                                     split_from=0, split_to=0.8)
         self._model.init_losses('Train', args.use_weighted_loss, dataset_train)
         self.data_loader_train = WriterDataLoader(dataset_train, is_train=True, numb_threads=args.n_threads_train,
                                                   batch_size=args.batch_size)
 
-        dataset_val = ImageDataset(args.gt_dir, args.gt_binarized_dir, transforms)
+        dataset_val = ImageDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
+                                   split_from=0.8, split_to=1)
         self._model.init_losses('Val', use_weighted_loss=False, dataset=dataset_val)
         self.data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                                 batch_size=args.batch_size)

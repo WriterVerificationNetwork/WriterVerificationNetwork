@@ -153,3 +153,5 @@ fabric.properties
 
 .DS_Store
 
+wandb
+checkpoints
