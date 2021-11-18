@@ -21,7 +21,7 @@ class BaseOptions:
         self._parser.add_argument('--network', type=str, default='wvn_inception')
         self._parser.add_argument('--save_freq_s', type=int, default=50,
                                   help='save the training losses to the summary writer every # seconds.')
-        self._parser.add_argument('--n_threads_train', default=4, type=int, help='# threads for loading data')
+        self._parser.add_argument('--n_threads_train', default=8, type=int, help='# threads for loading data')
         self._parser.add_argument('--n_threads_test', default=8, type=int, help='# threads for loading data')
         self._parser.add_argument('--group', type=str, default='experiment',
                                   help='name of the experiment. It decides where to store samples and models')

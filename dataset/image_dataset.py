@@ -26,13 +26,13 @@ class ImageDataset(Dataset):
         temp_image_list = []
         for letter in letters:
             image_by_letter = glob.glob(os.path.join(self.gt_binarized_dir, f'{letter}_*.png'))
-            temp_image_list.append(image_by_letter)
+            sp_from, sp_to = int(len(image_by_letter) * split_from), int(len(image_by_letter) * split_to)
+            temp_image_list.append(image_by_letter[sp_from: sp_to])
 
         negative_tm_list = create_negative_tm_pair(filter_neg_file, tms_ignoring)
         negative_tm_map = {f'{k}_{v}': (k, v) for k, v in negative_tm_list}
         self.image_list = []
         for image_by_letter in tqdm(temp_image_list):
-            letter_img_list = []
             for anchor in image_by_letter:
                 positive_image_list = []
                 negative_image_list = []
@@ -48,9 +48,7 @@ class ImageDataset(Dataset):
                             negative_image_list.append(img)
                 for pos_image in positive_image_list:
                     for neg_image in negative_image_list:
-                        letter_img_list.append([anchor, pos_image, neg_image])
-            sp_from, sp_to = int(len(letter_img_list) * split_from), int(len(letter_img_list) * split_to)
-            self.image_list += letter_img_list[sp_from: sp_to]
+                        self.image_list.append([anchor, pos_image, neg_image])
 
     def __getitem__(self, idx):
         # anchor
