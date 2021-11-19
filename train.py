@@ -84,7 +84,7 @@ class Trainer:
     def __get_data(self, batch_data, image_key, reconstruct_key, symbol_key):
         res = {'image': batch_data[image_key]}
         if 'reconstruct' in args.tasks:
-            res['reconstruct'] = batch_data[reconstruct_key]
+            res['reconstruct'] = batch_data[reconstruct_key] * args.bin_weight
         if 'symbol' in args.tasks:
             res['symbol'] = batch_data[symbol_key]
         return res
