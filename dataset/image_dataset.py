@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 import openpyxl
+import random
 import torchvision
 from PIL import Image, ImageOps
 from torch.utils.data import Dataset
@@ -33,7 +34,6 @@ class ImageDataset(Dataset):
         negative_tm_map = {f'{k}_{v}': (k, v) for k, v in negative_tm_list}
         self.image_list = []
         for image_by_letter in tqdm(temp_image_list):
-            exising_keys = set({})
             for anchor in image_by_letter:
                 positive_image_list = []
                 negative_image_list = []
@@ -47,59 +47,34 @@ class ImageDataset(Dataset):
                     else:
                         if f'{anchor_tm}_{img_tm}' in negative_tm_map:
                             negative_image_list.append(img)
-                for pos_image in positive_image_list:
-                    for neg_image in negative_image_list:
-                        anc_pos, pos_anc = anchor + pos_image + neg_image, pos_image + anchor + neg_image
-                        if anc_pos not in exising_keys and pos_anc not in exising_keys:
-                            self.image_list.append([anchor, pos_image, neg_image])
-                            exising_keys.add(anc_pos)
-                            exising_keys.add(pos_anc)
+                if len(positive_image_list) > 0 and len(negative_image_list) > 0:
+                    self.image_list.append((positive_image_list, anchor, negative_image_list))
 
     def __getitem__(self, idx):
         # anchor
-        anchor = os.path.basename(self.image_list[idx][0])
+        positive_image_list, anchor_img, negative_image_list = self.image_list[idx]
+        positive_img, negative_img = random.choice(positive_image_list), random.choice(negative_image_list)
+
+        # anchor image
+        anchor = os.path.basename(anchor_img)
         img_anchor = get_image(os.path.join(self.gt_dir, anchor.split("_")[0], anchor),
-                               self.transforms,
-                               MAX_WIDTH,
-                               MAX_HEIGHT,
-                               False,
-                               "img_anchor")
+                               self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False)
         bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor),
-                               self.transforms,
-                               MAX_BIN_WIDTH,
-                               MAX_BIN_HEIGHT,
-                               True,
-                               "bin_anchor")
+                               self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True)
 
         # positive image
-        img = os.path.basename(self.image_list[idx][1])
+        img = os.path.basename(positive_img)
         img_positive = get_image(os.path.join(self.gt_dir, img.split("_")[0], img),
-                                 self.transforms,
-                                 MAX_WIDTH,
-                                 MAX_HEIGHT,
-                                 False,
-                                 "img_positive")
+                                 self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False)
         bin_positive = get_image(os.path.join(self.gt_binarized_dir, img),
-                                 self.transforms,
-                                 MAX_BIN_WIDTH,
-                                 MAX_BIN_HEIGHT,
-                                 True,
-                                 "bin_positive")
+                                 self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True)
 
         # negative image
-        img = os.path.basename(self.image_list[idx][2])
+        img = os.path.basename(negative_img)
         img_negative = get_image(os.path.join(self.gt_dir, img.split("_")[0], img),
-                                 self.transforms,
-                                 MAX_WIDTH,
-                                 MAX_HEIGHT,
-                                 False,
-                                 "img_negative")
+                                 self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False)
         bin_negative = get_image(os.path.join(self.gt_binarized_dir, img),
-                                 self.transforms,
-                                 MAX_BIN_WIDTH,
-                                 MAX_BIN_HEIGHT,
-                                 True,
-                                 "bin_negative")
+                                 self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True)
 
         return {
             'symbol': letter_to_idx[anchor.split("_")[0]],
@@ -115,7 +90,7 @@ class ImageDataset(Dataset):
         return len(self.image_list)
 
 
-def get_image(image_path, data_transform, max_w, max_h, is_bin_img=False, name=""):
+def get_image(image_path, data_transform, max_w, max_h, is_bin_img=False):
     with Image.open(image_path) as img:
         # Resize image to make sure image size is smaller than page size
         width, height = img.size
