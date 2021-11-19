@@ -33,7 +33,7 @@ class BaseOptions:
         self._parser.add_argument('--lr', type=float, default=3e-4,
                                   help="The initial learning rate")
         self._parser.add_argument('--lr_policy', type=str, default='step', choices=['step'])
-        self._parser.add_argument('--lr_decay_epochs', type=int, default=15,
+        self._parser.add_argument('--lr_decay_epochs', type=int, default=50,
                                   help='reduce the lr to 0.1*lr for every # epochs')
         self._parser.add_argument('--n_epochs_per_eval', type=int, default=5,
                                   help='Run eval every n training epochs')
@@ -43,8 +43,8 @@ class BaseOptions:
         self._parser.add_argument('--lambda_task', type=float, default=[1, 1, 1], nargs="+")
         self._parser.add_argument('--bin_weight', type=float, default=5, nargs="+")
         self._parser.add_argument('--use_weighted_loss', action='store_true', help='Enable using weighted losses')
-        self._parser.add_argument('--nepochs', type=int, default=200)
-        self._parser.add_argument('--early_stop', type=int, default=10)
+        self._parser.add_argument('--nepochs', type=int, default=500)
+        self._parser.add_argument('--early_stop', type=int, default=20)
 
         self._initialized = True
 
