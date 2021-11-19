@@ -13,7 +13,7 @@ class WriterDataLoader:
         return DataLoader(
             self.dataset,
             batch_size=self.batch_size,
-            shuffle=self._is_train,
+            shuffle=True,
             num_workers=int(self.numb_threads),
             pin_memory=True,
             drop_last=self._is_train)

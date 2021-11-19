@@ -33,7 +33,7 @@ class ImageDataset(Dataset):
         negative_tm_map = {f'{k}_{v}': (k, v) for k, v in negative_tm_list}
         self.image_list = []
         for image_by_letter in tqdm(temp_image_list):
-            anchor_pos, pos_anchor = set({}), set({})
+            exising_keys = set({})
             for anchor in image_by_letter:
                 positive_image_list = []
                 negative_image_list = []
@@ -49,10 +49,11 @@ class ImageDataset(Dataset):
                             negative_image_list.append(img)
                 for pos_image in positive_image_list:
                     for neg_image in negative_image_list:
-                        if anchor + pos_image not in anchor_pos and pos_image + anchor not in pos_anchor:
+                        anc_pos, pos_anc = anchor + pos_image + neg_image, pos_image + anchor + neg_image
+                        if anc_pos not in exising_keys and pos_anc not in exising_keys:
                             self.image_list.append([anchor, pos_image, neg_image])
-                            anchor_pos.add(anchor + pos_image)
-                            pos_anchor.add(pos_image + anchor)
+                            exising_keys.add(anc_pos)
+                            exising_keys.add(pos_anc)
 
     def __getitem__(self, idx):
         # anchor

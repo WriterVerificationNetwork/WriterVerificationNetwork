@@ -12,6 +12,7 @@ from options.train_options import TrainOptions
 from utils.misc import EarlyStop
 from utils.transform import get_transforms
 from utils.wb_utils import log_prediction
+import torch.functional as F
 
 args = TrainOptions().parse()
 
@@ -49,7 +50,7 @@ class Trainer:
     def _train(self):
         self._current_step = 0
         self._last_save_time = time.time()
-        best_val_loss = 99999
+        best_val_acc = 99999
         for i_epoch in range(1, args.nepochs + 1):
             epoch_start_time = time.time()
             self._model.get_current_lr()
@@ -60,10 +61,10 @@ class Trainer:
             val_dict = self._validate(i_epoch)
             gc.collect()
 
-            current_loss = val_dict['loss_footprint']
-            if current_loss < best_val_loss:
-                print("Footprint val loss improved, from {:.4f} to {:.4f}".format(best_val_loss, current_loss))
-                best_val_loss = current_loss
+            current_acc = val_dict['val/acc/footprint']
+            if current_acc > best_val_acc:
+                print("Footprint val loss improved, from {:.4f} to {:.4f}".format(best_val_acc, current_acc))
+                best_val_acc = current_acc
                 for key in val_dict:
                     wandb.run.summary[f'best_model/{key}'] = val_dict[key]
                 self._model.save()  # save best model
@@ -73,26 +74,26 @@ class Trainer:
             print('End of epoch %d / %d \t Time Taken: %d sec (%d min or %d h)' %
                   (i_epoch, args.nepochs, time_epoch, time_epoch / 60, time_epoch / 3600))
 
-            if self.early_stop.should_stop(best_val_loss):
+            if self.early_stop.should_stop(1 - current_acc):
                 print(f'Early stop at epoch {i_epoch}')
                 break
 
     def _compute_loss(self, batch_data, log_data=False, n_log_items=10, log_counter=0):
         input_data = {
             'image': batch_data['img_anchor'],
-            'reconstruct': batch_data['bin_anchor'],
+            'reconstruct': batch_data['bin_anchor'] * args.bin_weight,
             'symbol': batch_data['symbol']
         }
         anchor_out, anchor_loss, anchor_log = self._model.compute_loss(input_data)
         input_data = {
             'image': batch_data['img_positive'],
-            'reconstruct': batch_data['bin_positive'],
+            'reconstruct': batch_data['bin_positive'] * args.bin_weight,
             'symbol': batch_data['symbol']
         }
         pos_out, pos_loss, pos_log = self._model.compute_loss(input_data)
         input_data = {
             'image': batch_data['img_negative'],
-            'reconstruct': batch_data['bin_negative'],
+            'reconstruct': batch_data['bin_negative'] * args.bin_weight,
             'symbol': batch_data['symbol']
         }
         neg_out, neg_loss, neg_log = self._model.compute_loss(input_data)
@@ -106,26 +107,44 @@ class Trainer:
             log_info['loss_footprint'] = footprint_loss.item()
 
         if log_data:
-            wb_table = wandb.Table(columns=['id', 'anchor', 'anchor_bin', 'positive', 'negative', 'symbol',
-                                            'symbol_pred', 'pos_distance', 'neg_distance'])
-            log_prediction(wb_table, log_counter, batch_data['img_anchor'], batch_data['img_positive'],
-                           batch_data['img_negative'], batch_data['symbol'],
-                           anchor_out, pos_out, neg_out, n_items=n_log_items)
+            wb_table = wandb.Table(columns=['id', 'anchor', 'anchor_bin', 'anchor_bin_pred', 'positive', 'negative',
+                                            'symbol', 'symbol_pred', 'pos_distance', 'neg_distance'])
+            log_prediction(wb_table, log_counter, batch_data['img_anchor'], batch_data['bin_anchor'],
+                           batch_data['img_positive'], batch_data['img_negative'], batch_data['symbol'],
+                           anchor_out, pos_out, neg_out, n_items=n_log_items, bin_weight=args.bin_weight)
             wandb.log({'val_prediction': wb_table})
+
+        accuracies = {}
+        if 'symbol' in args.tasks:
+            anchor_pred = torch.max(anchor_out['symbol'], dim=1).indices.cpu() == batch_data['symbol']
+            pos_pred = torch.max(pos_out['symbol'], dim=1).indices.cpu() == batch_data['symbol']
+            neg_pred = torch.max(neg_out['symbol'], dim=1).indices.cpu() == batch_data['symbol']
+            accuracies['symbol'] = torch.cat([anchor_pred, pos_pred, neg_pred], dim=0).type(torch.int8).tolist()
+
+        if 'footprint' in args.tasks:
+            distance_func = torch.nn.MSELoss(reduction='none')
+            anchor_pos_distance = distance_func(anchor_out['footprint'], pos_out['footprint']).mean(dim=1)
+            anchor_neg_distance = distance_func(anchor_out['footprint'], neg_out['footprint']).mean(dim=1)
+            accuracies['footprint'] = (anchor_neg_distance > anchor_pos_distance).type(torch.int8).tolist()
 
         final_losses = sum(final_losses) / len(final_losses)
         log_info['loss'] = final_losses.item()
-        return final_losses, log_info
+        return final_losses, log_info, accuracies
 
     def _train_epoch(self, i_epoch):
         self._model.set_train()
         data_loader = self.data_loader_train.get_dataloader()
+        all_accuracies = {}
         for i_train_batch, train_batch in enumerate(data_loader):
             iter_start_time = time.time()
 
             # display flags
             do_save = time.time() - self._last_save_time > args.save_freq_s
-            final_loss, log_info = self._compute_loss(train_batch)
+            final_loss, log_info, accuracies = self._compute_loss(train_batch)
+            for key in accuracies:
+                if key not in all_accuracies:
+                    all_accuracies[key] = []
+                all_accuracies[key] += accuracies[key]
             # train model
             self._model.optimise_params(final_loss)
             self._model.set_current_losses(log_info)
@@ -138,6 +157,9 @@ class Trainer:
                 loss_dict = self._model.get_current_losses()
                 for key in loss_dict:
                     save_dict[f'train/{key}'] = loss_dict[key]
+                for key in all_accuracies:
+                    save_dict[f'train/acc/{key}'] = sum(all_accuracies[key]) / len(all_accuracies[key])
+                    del all_accuracies[key]
                 wandb.log(save_dict, step=self._current_step)
                 self._display_terminal(iter_start_time, i_epoch, i_train_batch, len(data_loader), loss_dict)
                 self._last_save_time = time.time()
@@ -147,12 +169,18 @@ class Trainer:
         # set model to eval
         self._model.set_eval()
         val_errors = {}
-        eval_losses = {}
+        val_dict = {}
         data_loader = self.data_loader_val.get_dataloader()
         log_counter, max_counter = 0, 5
+        all_accuracies = {}
         for i_train_batch, train_batch in enumerate(data_loader):
             enable_logging = True if log_counter < max_counter else False
-            final_loss, log_info = self._compute_loss(train_batch, log_data=enable_logging, log_counter=log_counter)
+            final_loss, log_info, accuracies = self._compute_loss(train_batch, log_data=enable_logging,
+                                                                  log_counter=log_counter)
+            for key in accuracies:
+                if key not in all_accuracies:
+                    all_accuracies[key] = []
+                all_accuracies[key] += accuracies[key]
             log_counter += 1
 
             # store current batch errors
@@ -170,15 +198,18 @@ class Trainer:
             output = "{} Validation {}: Epoch [{}] Step [{}] loss {:.4f}".format(
                 k, now_time, i_epoch, self._current_step, val_errors[k])
             print(output)
-            eval_losses[f'val/{k}'] = val_errors[k]
+            val_dict[f'val/{k}'] = val_errors[k]
 
-        eval_losses[f'val/loss'] =\
-            sum([self._model.normalize_lambda(t) * eval_losses[f'val/loss_{t}'] for t in args.tasks])
+        val_dict[f'val/loss'] =\
+            sum([self._model.normalize_lambda(t) * val_dict[f'val/loss_{t}'] for t in args.tasks])
+
+        for key in all_accuracies:
+            val_dict[f'val/acc/{key}'] = sum(all_accuracies[key]) / len(all_accuracies[key])
 
         # set model back to train
         self._model.set_train()
-        wandb.log(eval_losses, step=self._current_step)
-        return val_errors
+        wandb.log(val_dict, step=self._current_step)
+        return val_dict
 
     def _display_terminal(self, iter_start_time, i_epoch, i_train_batch, num_batches, train_dict):
         errors = train_dict
