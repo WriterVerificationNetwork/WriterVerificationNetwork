@@ -29,6 +29,5 @@ def log_prediction(wb_table, log_counter, anchor, bin_anchor, positive, negative
         img_id = str(_id) + "_" + str(log_counter)
         s = idx_to_letter[s]
         sp = idx_to_letter[sp]
-        wb_table.add_data(img_id, wb_img(a), wb_img(ab), wb_img(abp), wb_img(p), wb_img(n), s, sp,
-                          pos_distance, neg_distance)
+        wb_table.add_data(img_id, wb_img(a), wb_img(ab), wb_img(abp), wb_img(p), wb_img(n), s, sp, pos, neg)
         _id += 1
