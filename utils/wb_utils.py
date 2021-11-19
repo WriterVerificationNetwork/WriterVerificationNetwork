@@ -19,9 +19,9 @@ def log_prediction(wb_table, log_counter, anchor, bin_anchor, positive, negative
     negative = negative[:n_items].cpu()
     symbol = symbol[:n_items].cpu().numpy()
     symbol_pred = torch.max(anchor_out['symbol'][:n_items], dim=1).indices.cpu().numpy()
-    distance_func = nn.MSELoss()
-    pos_distance = distance_func(anchor_out['footprint'][:n_items], pos_out['footprint'][:n_items])
-    neg_distance = distance_func(anchor_out['footprint'][:n_items], neg_out['footprint'][:n_items])
+    distance_func = nn.MSELoss(reduction='none')
+    pos_distance = distance_func(anchor_out['footprint'][:n_items], pos_out['footprint'][:n_items]).mean(dim=1)
+    neg_distance = distance_func(anchor_out['footprint'][:n_items], neg_out['footprint'][:n_items]).mean(dim=1)
 
     _id = 0
     for a, ab, abp, p, n, s, sp, pos, neg in zip(anchor, anchor_bin, anchor_bin_pred, positive, negative, symbol,
