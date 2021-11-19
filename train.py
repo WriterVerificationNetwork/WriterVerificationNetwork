@@ -50,7 +50,7 @@ class Trainer:
     def _train(self):
         self._current_step = 0
         self._last_save_time = time.time()
-        best_val_acc = 99999
+        best_val_acc = 0.
         for i_epoch in range(1, args.nepochs + 1):
             epoch_start_time = time.time()
             self._model.get_current_lr()
