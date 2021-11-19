@@ -60,10 +60,10 @@ class Criterion:
             loss_funcs.append(loss_func)
 
         @rename(self.loss_name)
-        def combine_losses(*args, **kwargs):
+        def combine_losses(*args):
             _loss = 0
             for _loss_func in loss_funcs:
-                _loss += _loss_func(*args, **kwargs)
+                _loss += _loss_func(*args)
             return _loss
         return combine_losses
 
@@ -84,8 +84,8 @@ class Criterion:
             raise NotImplementedError(f'Loss {loss} hasn\'t implemented yet!!!')
 
         @rename(loss)
-        def inner_func(*args, **kwargs):
-            return loss_func(*args, **kwargs)
+        def inner_func(*args):
+            return loss_func(*args)
         return inner_func
 
 

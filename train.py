@@ -12,7 +12,6 @@ from options.train_options import TrainOptions
 from utils.misc import EarlyStop
 from utils.transform import get_transforms
 from utils.wb_utils import log_prediction
-import torch.functional as F
 
 args = TrainOptions().parse()
 
@@ -67,7 +66,7 @@ class Trainer:
 
             current_acc = val_dict['val/acc/footprint']
             if current_acc > best_val_acc:
-                print("Footprint val loss improved, from {:.4f} to {:.4f}".format(best_val_acc, current_acc))
+                print("Footprint val acc improved, from {:.4f} to {:.4f}".format(best_val_acc, current_acc))
                 best_val_acc = current_acc
                 for key in val_dict:
                     wandb.run.summary[f'best_model/{key}'] = val_dict[key]
@@ -82,40 +81,40 @@ class Trainer:
                 print(f'Early stop at epoch {i_epoch}')
                 break
 
-    def _compute_loss(self, batch_data, log_data=False, n_log_items=10, log_counter=0):
-        input_data = {
-            'image': batch_data['img_anchor'],
-            'reconstruct': batch_data['bin_anchor'] * args.bin_weight,
-            'symbol': batch_data['symbol']
-        }
+    def __get_data(self, batch_data, image_key, reconstruct_key, symbol_key):
+        res = {'image': batch_data[image_key]}
+        if 'reconstruct' in args.tasks:
+            res['reconstruct'] = batch_data[reconstruct_key]
+        if 'symbol' in args.tasks:
+            res['symbol'] = batch_data[symbol_key]
+        return res
+
+    def _compute_loss(self, batch_data, log_data=False, n_log_items=10):
+        input_data = self.__get_data(batch_data, 'img_anchor', 'bin_anchor', 'symbol')
         anchor_out, anchor_loss, anchor_log = self._model.compute_loss(input_data)
-        input_data = {
-            'image': batch_data['img_positive'],
-            'reconstruct': batch_data['bin_positive'] * args.bin_weight,
-            'symbol': batch_data['symbol']
-        }
+        input_data = self.__get_data(batch_data, 'img_positive', 'bin_positive', 'symbol')
         pos_out, pos_loss, pos_log = self._model.compute_loss(input_data)
-        input_data = {
-            'image': batch_data['img_negative'],
-            'reconstruct': batch_data['bin_negative'] * args.bin_weight,
-            'symbol': batch_data['symbol']
-        }
+        input_data = self.__get_data(batch_data, 'img_negative', 'bin_negative', 'symbol')
         neg_out, neg_loss, neg_log = self._model.compute_loss(input_data)
         log_info = {k: statistics.mean([anchor_log[k], pos_log[k], neg_log[k]]) for k in anchor_log}
 
         final_losses = [anchor_loss, pos_loss, neg_loss]
-        if 'footprint' in args.tasks:
-            footprint_loss = self._model.compute_footprint(anchor_out['footprint'], pos_out['footprint'],
-                                                           neg_out['footprint'])
-            final_losses += [footprint_loss]
-            log_info['loss_footprint'] = footprint_loss.item()
+        footprint_loss = self._model.compute_footprint(anchor_out['footprint'], pos_out['footprint'],
+                                                       neg_out['footprint'])
+        final_losses += [footprint_loss * 4.]
+        log_info['loss_footprint'] = footprint_loss.item()
 
         if log_data:
-            wb_table = wandb.Table(columns=['id', 'anchor', 'anchor_bin', 'anchor_bin_pred', 'positive', 'negative',
-                                            'symbol', 'symbol_pred', 'pos_distance', 'neg_distance'])
-            log_prediction(wb_table, log_counter, batch_data['img_anchor'], batch_data['bin_anchor'],
-                           batch_data['img_positive'], batch_data['img_negative'], batch_data['symbol'],
-                           anchor_out, pos_out, neg_out, n_items=n_log_items, bin_weight=args.bin_weight)
+            columns = ['id', 'anchor']
+            if 'reconstruct' in args.tasks:
+                columns += ['anchor_bin', 'anchor_bin_pred']
+            columns += ['positive', 'negative']
+            if 'symbol' in args.tasks:
+                columns += ['symbol', 'symbol_pred']
+            columns += ['pos_distance', 'neg_distance']
+            wb_table = wandb.Table(columns=columns)
+            log_prediction(wb_table, columns, batch_data, anchor_out, pos_out, neg_out,
+                           n_items=n_log_items, bin_weight=args.bin_weight)
             wandb.log({'val_prediction': wb_table})
 
         accuracies = {}
@@ -175,17 +174,13 @@ class Trainer:
         val_errors = {}
         val_dict = {}
         data_loader = self.data_loader_val.get_dataloader()
-        log_counter, max_counter = 0, 5
         all_accuracies = {}
         for i_train_batch, train_batch in enumerate(data_loader):
-            enable_logging = True if log_counter < max_counter else False
-            final_loss, log_info, accuracies = self._compute_loss(train_batch, log_data=enable_logging,
-                                                                  log_counter=log_counter)
+            final_loss, log_info, accuracies = self._compute_loss(train_batch, log_data=i_train_batch == 0)
             for key in accuracies:
                 if key not in all_accuracies:
                     all_accuracies[key] = []
                 all_accuracies[key] += accuracies[key]
-            log_counter += 1
 
             # store current batch errors
             for k, v in log_info.items():

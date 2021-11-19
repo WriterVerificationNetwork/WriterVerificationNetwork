@@ -44,7 +44,7 @@ class BaseOptions:
         self._parser.add_argument('--bin_weight', type=float, default=5, nargs="+")
         self._parser.add_argument('--use_weighted_loss', action='store_true', help='Enable using weighted losses')
         self._parser.add_argument('--nepochs', type=int, default=500)
-        self._parser.add_argument('--early_stop', type=int, default=20)
+        self._parser.add_argument('--early_stop', type=int, default=10)
 
         self._initialized = True
 

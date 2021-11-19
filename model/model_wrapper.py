@@ -122,14 +122,14 @@ class ModelWrapper:
         self._model.eval()
         self._is_train = False
 
-    def compute_footprint(self, anchor, positive, negative, **kwargs):
+    def compute_footprint(self, anchor, positive, negative):
         criterion_task = self._criterions_per_task['Train']['footprint']
-        loss_task = criterion_task(anchor, positive, negative, **kwargs)
+        loss_task = criterion_task(anchor, positive, negative)
         return self.normalize_lambda('footprint') * loss_task
 
     def compute_loss(self, batch_data):
         train_dict = dict()
-        loss = 0.
+        loss = torch.tensor(0).to(self._device)
         input_image = batch_data['image'].to(self._device, non_blocking=True)
         with torch.set_grad_enabled(self._is_train):
             output = self._model(input_image)
