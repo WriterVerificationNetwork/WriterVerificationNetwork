@@ -159,7 +159,7 @@ class Trainer:
                     save_dict[f'train/{key}'] = loss_dict[key]
                 for key in all_accuracies:
                     save_dict[f'train/acc/{key}'] = sum(all_accuracies[key]) / len(all_accuracies[key])
-                    del all_accuracies[key]
+                    all_accuracies[key] = []
                 wandb.log(save_dict, step=self._current_step)
                 self._display_terminal(iter_start_time, i_epoch, i_train_batch, len(data_loader), loss_dict)
                 self._last_save_time = time.time()
