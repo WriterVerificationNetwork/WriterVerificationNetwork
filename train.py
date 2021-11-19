@@ -58,6 +58,10 @@ class Trainer:
             self._train_epoch(i_epoch)
             if args.lr_policy == 'step':
                 self._model.lr_scheduler.step()
+
+            if not i_epoch % args.n_epochs_per_eval == 0:
+                continue
+
             val_dict = self._validate(i_epoch)
             gc.collect()
 

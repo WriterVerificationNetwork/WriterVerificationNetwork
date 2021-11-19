@@ -35,6 +35,8 @@ class BaseOptions:
         self._parser.add_argument('--lr_policy', type=str, default='step', choices=['step'])
         self._parser.add_argument('--lr_decay_epochs', type=int, default=15,
                                   help='reduce the lr to 0.1*lr for every # epochs')
+        self._parser.add_argument('--n_epochs_per_eval', type=int, default=5,
+                                  help='Run eval every n training epochs')
         self._parser.add_argument('--weight_decay', type=float, default=0., help='weight decay')
         self._parser.add_argument('--tasks', type=str, default=['reconstruct', 'symbol', 'footprint'], nargs="+")
         self._parser.add_argument('--criterion', type=str, default=['mse', 'ce', 'triplet'], nargs="+")

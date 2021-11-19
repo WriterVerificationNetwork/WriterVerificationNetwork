@@ -98,7 +98,8 @@ def get_image(image_path, data_transform, max_w, max_h, is_bin_img=False):
         ratio_h = max_h / height
         scale = min(ratio_h, ratio_w)
         image = resize_image(img, scale).convert('RGB')
-        image = ImageOps.invert(image)
+        if not is_bin_img:
+            image = ImageOps.invert(image)
         # Find the dominant color
         # dominant_color = bincount_app(np.asarray(img.convert("RGB")))
         # Add image to the background
