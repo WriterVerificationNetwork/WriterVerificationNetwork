@@ -129,7 +129,7 @@ class ModelWrapper:
 
     def compute_loss(self, batch_data):
         train_dict = dict()
-        loss = torch.tensor(0).to(self._device)
+        loss = torch.tensor(0.).to(self._device)
         input_image = batch_data['image'].to(self._device, non_blocking=True)
         with torch.set_grad_enabled(self._is_train):
             output = self._model(input_image)
