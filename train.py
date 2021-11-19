@@ -101,7 +101,7 @@ class Trainer:
         final_losses = [anchor_loss, pos_loss, neg_loss]
         footprint_loss = self._model.compute_footprint(anchor_out['footprint'], pos_out['footprint'],
                                                        neg_out['footprint'])
-        final_losses += [footprint_loss * 4.]
+        final_losses += [footprint_loss]
         log_info['loss_footprint'] = footprint_loss.item()
 
         if log_data:
@@ -130,7 +130,7 @@ class Trainer:
             anchor_neg_distance = distance_func(anchor_out['footprint'], neg_out['footprint']).mean(dim=1)
             accuracies['footprint'] = (anchor_neg_distance > anchor_pos_distance).type(torch.int8).tolist()
 
-        final_losses = sum(final_losses) / len(final_losses)
+        final_losses = sum(final_losses)
         log_info['loss'] = final_losses.item()
         return final_losses, log_info, accuracies
 
