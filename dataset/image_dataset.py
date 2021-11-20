@@ -17,7 +17,7 @@ tms_ignoring = {"60255", "60283", "60940", "61026", "61112", "61138"}
 
 class ImageDataset(Dataset):
 
-    def __init__(self, gt_dir, gt_binarized_dir, filter_neg_file, transforms, split_from, split_to):
+    def __init__(self, gt_dir, gt_binarized_dir, filter_neg_file, transforms, split_from, split_to, unfold=False):
         # Init folder dir
         self.gt_dir = gt_dir
         self.gt_binarized_dir = gt_binarized_dir
@@ -34,6 +34,7 @@ class ImageDataset(Dataset):
         negative_tm_map = {f'{k}_{v}': (k, v) for k, v in negative_tm_list}
         self.image_list = []
         for image_by_letter in tqdm(temp_image_list):
+            pos_anc_neg, anc_pos_neg = set({}), set({})
             for anchor in image_by_letter:
                 positive_image_list = []
                 negative_image_list = []
@@ -47,8 +48,17 @@ class ImageDataset(Dataset):
                     else:
                         if f'{anchor_tm}_{img_tm}' in negative_tm_map:
                             negative_image_list.append(img)
-                if len(positive_image_list) > 0 and len(negative_image_list) > 0:
-                    self.image_list.append((positive_image_list, anchor, negative_image_list))
+                if not unfold:
+                    if len(positive_image_list) > 0 and len(negative_image_list) > 0:
+                        self.image_list.append((positive_image_list, anchor, negative_image_list))
+                else:
+                    for pos_img in positive_image_list:
+                        for neg_img in negative_image_list:
+                            if pos_img + anchor + neg_img in pos_anc_neg or anchor + pos_img + neg_img in anc_pos_neg:
+                                continue
+                            self.image_list.append(([pos_img], anchor, [neg_img]))
+                            pos_anc_neg.add(pos_img + anchor + neg_img)
+                            anc_pos_neg.add(anchor + pos_img + neg_img)
 
     def __getitem__(self, idx):
         # anchor
