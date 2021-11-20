@@ -33,7 +33,7 @@ class BaseOptions:
         self._parser.add_argument('--lr', type=float, default=1e-5,
                                   help="The initial learning rate")
         self._parser.add_argument('--lr_policy', type=str, default='step', choices=['step'])
-        self._parser.add_argument('--lr_decay_epochs', type=int, default=50,
+        self._parser.add_argument('--lr_decay_epochs', type=int, default=100,
                                   help='reduce the lr to 0.1*lr for every # epochs')
         self._parser.add_argument('--n_epochs_per_eval', type=int, default=5,
                                   help='Run eval every n training epochs')
