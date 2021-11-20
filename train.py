@@ -133,6 +133,7 @@ class Trainer:
         final_loss = 0.
         for task in final_losses:
             final_loss += self._model.normalize_lambda(task) * final_losses[task]
+        log_info['loss'] = final_loss.item()
         return final_loss, log_info, accuracies
 
     def _train_epoch(self, i_epoch):
