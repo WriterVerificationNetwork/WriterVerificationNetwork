@@ -129,7 +129,6 @@ class ModelWrapper:
 
     def compute_loss(self, batch_data):
         train_dict = dict()
-        loss = torch.tensor(0.).to(self._device)
         input_image = batch_data['image'].to(self._device, non_blocking=True)
         with torch.set_grad_enabled(self._is_train):
             output = self._model(input_image)
@@ -137,10 +136,8 @@ class ModelWrapper:
             label = batch_data[t].to(self._device, non_blocking=True)
             criterion_task = self._criterions_per_task['Train'][t]
             loss_task = criterion_task(output[t], label)
-            train_dict['loss_' + t] = loss_task.item()
-            loss += self.normalize_lambda(t) * loss_task
-        train_dict['loss'] = loss.item()
-        return output, loss, train_dict
+            train_dict[t] = loss_task
+        return output, train_dict
 
     def optimise_params(self, loss):
         self._optimizer.zero_grad()

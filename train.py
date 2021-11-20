@@ -91,18 +91,17 @@ class Trainer:
 
     def _compute_loss(self, batch_data, log_data=False, n_log_items=10):
         input_data = self.__get_data(batch_data, 'img_anchor', 'bin_anchor', 'symbol')
-        anchor_out, anchor_loss, anchor_log = self._model.compute_loss(input_data)
+        anchor_out, anchor_losses = self._model.compute_loss(input_data)
         input_data = self.__get_data(batch_data, 'img_positive', 'bin_positive', 'symbol')
-        pos_out, pos_loss, pos_log = self._model.compute_loss(input_data)
+        pos_out, pos_losses = self._model.compute_loss(input_data)
         input_data = self.__get_data(batch_data, 'img_negative', 'bin_negative', 'symbol')
-        neg_out, neg_loss, neg_log = self._model.compute_loss(input_data)
-        log_info = {k: statistics.mean([anchor_log[k], pos_log[k], neg_log[k]]) for k in anchor_log}
-
-        final_losses = [anchor_loss, pos_loss, neg_loss]
+        neg_out, neg_losses = self._model.compute_loss(input_data)
         footprint_loss = self._model.compute_footprint(anchor_out['footprint'], pos_out['footprint'],
                                                        neg_out['footprint'])
-        final_losses += [footprint_loss]
-        log_info['loss_footprint'] = footprint_loss.item()
+        final_losses = {}
+        for task in anchor_losses:
+            final_losses[task] = (anchor_losses[task] + pos_losses[task] + neg_losses[task]) / 3.
+        final_losses['footprint'] = footprint_loss
 
         if log_data:
             columns = ['id', 'anchor']
@@ -130,9 +129,11 @@ class Trainer:
             anchor_neg_distance = distance_func(anchor_out['footprint'], neg_out['footprint']).mean(dim=1)
             accuracies['footprint'] = (anchor_neg_distance > anchor_pos_distance).type(torch.int8).tolist()
 
-        final_losses = sum(final_losses)
-        log_info['loss'] = final_losses.item()
-        return final_losses, log_info, accuracies
+        log_info = {f'loss_{k}': v.item() for k, v in final_losses.items()}
+        final_loss = 0.
+        for task in final_losses:
+            final_loss += self._model.normalize_lambda(task) * final_losses[task]
+        return final_loss, log_info, accuracies
 
     def _train_epoch(self, i_epoch):
         self._model.set_train()
