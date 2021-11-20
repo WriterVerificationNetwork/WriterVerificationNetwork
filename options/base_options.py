@@ -30,7 +30,7 @@ class BaseOptions:
         self._parser.add_argument('--wb_entity', type=str, default='glmanhtu', help='Wandb entity name')
         self._parser.add_argument('--wb_project', type=str, default='writer-verification-network', help='Wandb project')
         self._parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
-        self._parser.add_argument('--lr', type=float, default=3e-4,
+        self._parser.add_argument('--lr', type=float, default=1e-5,
                                   help="The initial learning rate")
         self._parser.add_argument('--lr_policy', type=str, default='step', choices=['step'])
         self._parser.add_argument('--lr_decay_epochs', type=int, default=50,

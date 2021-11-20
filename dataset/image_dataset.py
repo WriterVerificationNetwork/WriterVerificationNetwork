@@ -56,25 +56,28 @@ class ImageDataset(Dataset):
         positive_img, negative_img = random.choice(positive_image_list), random.choice(negative_image_list)
 
         # anchor image
+        moving_percent = random.randint(0, 10) / 10.
         anchor = os.path.basename(anchor_img)
         img_anchor = get_image(os.path.join(self.gt_dir, anchor.split("_")[0], anchor),
-                               self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False)
+                               self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
         bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor),
-                               self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True)
+                               self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True, mov=moving_percent)
 
         # positive image
+        moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(positive_img)
         img_positive = get_image(os.path.join(self.gt_dir, img.split("_")[0], img),
-                                 self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False)
+                                 self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
         bin_positive = get_image(os.path.join(self.gt_binarized_dir, img),
-                                 self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True)
+                                 self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True, mov=moving_percent)
 
         # negative image
+        moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(negative_img)
         img_negative = get_image(os.path.join(self.gt_dir, img.split("_")[0], img),
-                                 self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False)
+                                 self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
         bin_negative = get_image(os.path.join(self.gt_binarized_dir, img),
-                                 self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True)
+                                 self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True, mov=moving_percent)
 
         return {
             'symbol': letter_to_idx[anchor.split("_")[0]],
@@ -90,7 +93,7 @@ class ImageDataset(Dataset):
         return len(self.image_list)
 
 
-def get_image(image_path, data_transform, max_w, max_h, is_bin_img=False):
+def get_image(image_path, data_transform, max_w, max_h, is_bin_img=False, mov=0.):
     with Image.open(image_path) as img:
         # Resize image to make sure image size is smaller than page size
         width, height = img.size
@@ -104,14 +107,17 @@ def get_image(image_path, data_transform, max_w, max_h, is_bin_img=False):
         # dominant_color = bincount_app(np.asarray(img.convert("RGB")))
         # Add image to the background
         padding_image = Image.new(mode="RGB", size=(max_w, max_h), color=(0, 0, 0))
-        padding_image.paste(image, box=(0, 0))
+        padding_image.paste(image, box=(int(mov * (max_w - width)), int(mov * (max_h - height))))
         # padding_image.save(name + ".png")
 
         if is_bin_img:
             padding_image = padding_image.convert("L")
 
     # Transform image
-    img_tensor = data_transform(padding_image)
+    if not is_bin_img:
+        img_tensor = data_transform(padding_image)
+    else:
+        img_tensor = torchvision.transforms.ToTensor()(padding_image)
 
     return img_tensor
 

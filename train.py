@@ -25,7 +25,7 @@ class Trainer:
         wandb.run.save()
         wandb.config.update(args)
         device = torch.device('cuda' if args.cuda else 'cpu')
-        self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=0.4)
+        self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=0.5)
         transforms = get_transforms(args)
         dataset_train = ImageDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
                                      split_from=0, split_to=0.8)
