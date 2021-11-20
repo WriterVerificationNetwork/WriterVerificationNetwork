@@ -1,10 +1,10 @@
 import glob
 import os
+import random
 from datetime import datetime
 from pathlib import Path
 
 import openpyxl
-import random
 import torchvision
 from PIL import Image, ImageOps
 from torch.utils.data import Dataset
@@ -101,7 +101,7 @@ def get_image(image_path, data_transform, max_w, max_h, is_bin_img=False, mov=0.
         ratio_h = max_h / height
         scale = min(ratio_h, ratio_w)
         image = resize_image(img, scale).convert('RGB')
-        width, height = img.size
+        width, height = image.size
         if not is_bin_img:
             image = ImageOps.invert(image)
         # Find the dominant color
