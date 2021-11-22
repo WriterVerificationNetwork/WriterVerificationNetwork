@@ -78,6 +78,12 @@ class ModelWrapper:
         torch.save(save_dict, save_path)
         print('saved net: %s' % save_path)
 
+    def load_network(self, pretrained_checkpoint):
+        assert os.path.exists(pretrained_checkpoint), 'Weights file %s not found ' % pretrained_checkpoint
+        checkpoint = torch.load(pretrained_checkpoint, map_location=map_location(self._args.cuda))
+        self._model.load_state_dict(checkpoint)
+        print('loaded net: %s' % pretrained_checkpoint)
+
     def _load_network(self, network, network_label):
         load_filename = 'net_%s.pth' % network_label
         load_path = os.path.join(self._save_dir, load_filename)
@@ -127,14 +133,14 @@ class ModelWrapper:
         loss_task = criterion_task(anchor, positive, negative)
         return self.normalize_lambda('footprint') * loss_task
 
-    def compute_loss(self, batch_data):
+    def compute_loss(self, batch_data, criterion_mode='Train'):
         train_dict = dict()
         input_image = batch_data['image'].to(self._device, non_blocking=True)
         with torch.set_grad_enabled(self._is_train):
             output = self._model(input_image)
         for t in [x for x in self._args.tasks if x != 'footprint']:
             label = batch_data[t].to(self._device, non_blocking=True)
-            criterion_task = self._criterions_per_task['Train'][t]
+            criterion_task = self._criterions_per_task[criterion_mode][t]
             loss_task = criterion_task(output[t], label)
             train_dict[t] = loss_task
         return output, train_dict

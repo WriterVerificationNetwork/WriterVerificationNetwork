@@ -68,6 +68,7 @@ class ImageDataset(Dataset):
         # anchor image
         moving_percent = random.randint(0, 10) / 10.
         anchor = os.path.basename(anchor_img)
+        anchor_tm = anchor.split("_")[1]
         img_anchor = get_image(os.path.join(self.gt_dir, anchor.split("_")[0], anchor),
                                self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
         bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor),
@@ -92,6 +93,7 @@ class ImageDataset(Dataset):
         return {
             'symbol': letter_to_idx[anchor.split("_")[0]],
             'img_anchor': img_anchor,
+            'tm_anchor': anchor_tm,
             'bin_anchor': bin_anchor,
             'img_positive': img_positive,
             'bin_positive': bin_positive,
