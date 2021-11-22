@@ -41,7 +41,7 @@ class BaseOptions:
         self._parser.add_argument('--tasks', type=str, default=['reconstruct', 'symbol', 'footprint'], nargs="+")
         self._parser.add_argument('--criterion', type=str, default=['mse', 'ce', 'triplet'], nargs="+")
         self._parser.add_argument('--lambda_task', type=float, default=[1, 1, 1], nargs="+")
-        self._parser.add_argument('--bin_weight', type=float, default=5, nargs="+")
+        self._parser.add_argument('--bin_weight', type=float, default=5)
         self._parser.add_argument('--use_weighted_loss', action='store_true', help='Enable using weighted losses')
         self._parser.add_argument('--nepochs', type=int, default=500)
         self._parser.add_argument('--early_stop', type=int, default=20)
