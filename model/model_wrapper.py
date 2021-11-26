@@ -131,7 +131,7 @@ class ModelWrapper:
     def compute_footprint(self, anchor, positive, negative):
         criterion_task = self._criterions_per_task['Train']['footprint']
         loss_task = criterion_task(anchor, positive, negative)
-        return self.normalize_lambda('footprint') * loss_task
+        return loss_task
 
     def compute_loss(self, batch_data, criterion_mode='Train'):
         train_dict = dict()
