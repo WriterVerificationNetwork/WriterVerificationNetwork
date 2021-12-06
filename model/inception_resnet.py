@@ -15,30 +15,30 @@ class WriterVerificationNetwork(InceptionResnetV1):
         super().__init__(classify=False, device=device, num_classes=1, dropout_prob=dropout)
 
         self.up_scaling_1 = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=896, padding=1, out_channels=256, kernel_size=(4, 4), stride=2),
+            nn.ConvTranspose2d(in_channels=896, out_channels=256, kernel_size=(2, 2), stride=2),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.BatchNorm2d(256)
         )
 
         self.up_scaling_2 = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=256, padding=1, out_channels=64, kernel_size=(4, 4), stride=2),
-            nn.ReLU(),
-            nn.BatchNorm2d(64)
+            nn.ConvTranspose2d(in_channels=256, out_channels=64, kernel_size=(2, 2), stride=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU()
         )
 
         self.up_scaling_3 = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=64, padding=1, out_channels=32, kernel_size=(4, 4), stride=2),
+            nn.ConvTranspose2d(in_channels=64, out_channels=16, kernel_size=(2, 2), stride=2),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.BatchNorm2d(32),
             nn.Dropout2d(p=dropout)
         )
 
-        self.final_reconstruct = nn.Conv2d(in_channels=32, out_channels=1, kernel_size=(1, 1))
+        self.final_reconstruct = nn.Conv2d(in_channels=16, out_channels=1, kernel_size=(1, 1))
 
         self.symbol_embedding = nn.Sequential(
             nn.Linear(1792, 512),
-            nn.ReLU(),
             nn.BatchNorm1d(512),
+            nn.ReLU(),
             nn.Linear(512, 256),
             nn.BatchNorm1d(256)
         )
@@ -52,8 +52,8 @@ class WriterVerificationNetwork(InceptionResnetV1):
 
         self.writer_footprint = nn.Sequential(
             nn.Linear(1792, 1024),
-            nn.ReLU(),
             nn.BatchNorm1d(1024),
+            nn.ReLU(),
             nn.Dropout(p=dropout),
             nn.Linear(1024, 512, bias=False),
             nn.BatchNorm1d(512)
