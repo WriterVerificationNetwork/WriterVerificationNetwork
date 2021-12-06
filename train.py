@@ -114,7 +114,7 @@ class Trainer:
             wb_table = wandb.Table(columns=columns)
             log_prediction(wb_table, columns, batch_data, anchor_out, pos_out, neg_out,
                            n_items=n_log_items, bin_weight=args.bin_weight)
-            wandb.log({'val_prediction': wb_table})
+            wandb.log({'val_prediction': wb_table}, step=self._current_step)
 
         accuracies = {}
         if 'symbol' in args.tasks:
