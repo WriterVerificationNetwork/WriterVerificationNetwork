@@ -38,3 +38,13 @@ def resize_image(image: Image.Image, scale_factor: int) -> Image.Image:
         return image
     return image.resize((round(image.width * scale_factor), round(image.height * scale_factor)),
                         resample=Image.BILINEAR)
+
+
+def group_by(iter_data, key_fn):
+    results = {}
+    for item in iter_data:
+        key = key_fn(item)
+        if key not in results:
+            results[key] = []
+        results[key].append(item)
+    return results
