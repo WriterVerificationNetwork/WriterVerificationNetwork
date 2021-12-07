@@ -44,8 +44,8 @@ class WriterVerificationNetwork(InceptionResnetV1):
         )
 
         self.symbol_embedding_projection = nn.Sequential(
-            nn.Linear(256, 128, bias=False),
-            nn.BatchNorm1d(128)
+            nn.Linear(256, 32, bias=False),
+            nn.BatchNorm1d(32)
         )
 
         self.final_symbol = nn.Linear(256, numb_symbols)
@@ -55,11 +55,11 @@ class WriterVerificationNetwork(InceptionResnetV1):
             nn.BatchNorm1d(1024),
             nn.ReLU(),
             nn.Dropout(p=dropout),
-            nn.Linear(1024, 512, bias=False),
-            nn.BatchNorm1d(512)
+            nn.Linear(1024, 128, bias=False),
+            nn.BatchNorm1d(128)
         )
-        self.symbol_footprint_projection = nn.Linear(640, 512)
-        self.writer_footprint_bn = nn.BatchNorm1d(512)
+        self.symbol_footprint_projection = nn.Linear(160, 128)
+        self.writer_footprint_bn = nn.BatchNorm1d(128)
         self.to(device)
 
         self._tasks = tasks
