@@ -30,7 +30,7 @@ class TMDataset(Dataset):
 
         self.image_list = []
         for image_by_letter in tqdm(temp_image_list):
-            pos_anc_neg, anc_pos_neg = set({}), set({})
+            pos_anc, neg_anc = set({}), set({})
             for anchor in image_by_letter:
                 positive_image_list = []
                 negative_image_list = []
@@ -49,11 +49,12 @@ class TMDataset(Dataset):
                 else:
                     for pos_img in positive_image_list:
                         for neg_img in negative_image_list:
-                            if pos_img + anchor + neg_img in pos_anc_neg or anchor + pos_img + neg_img in anc_pos_neg:
+                            if pos_img + anchor in pos_anc or anchor + pos_img in pos_anc \
+                                    or anchor + neg_img in neg_anc or neg_img + anchor in neg_anc:
                                 continue
                             self.image_list.append(([pos_img], anchor, [neg_img]))
-                            pos_anc_neg.add(pos_img + anchor + neg_img)
-                            anc_pos_neg.add(anchor + pos_img + neg_img)
+                            pos_anc.add(pos_img + anchor)
+                            neg_anc.add(anchor + neg_img)
 
     def __getitem__(self, idx):
         # anchor

@@ -156,3 +156,4 @@ fabric.properties
 wandb
 checkpoints
 visualization
+distance_matrix.csv
