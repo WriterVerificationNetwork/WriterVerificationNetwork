@@ -1,12 +1,10 @@
 import gc
-import statistics
 import time
 
 import torch
 import wandb
 
 from dataset.data_loader import WriterDataLoader
-from dataset.image_dataset import ImageDataset
 from dataset.tm_dataset import TMDataset
 from model.model_factory import ModelsFactory
 from options.train_options import TrainOptions
@@ -29,23 +27,37 @@ class Trainer:
         self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=0.5)
         transforms = get_transforms(args)
         dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
-                                     split_from=0, split_to=0.8)
+                                  split_from=0, split_to=0.8)
         self._model.init_losses('Train', args.use_weighted_loss, dataset_train)
         self.data_loader_train = WriterDataLoader(dataset_train, is_train=True, numb_threads=args.n_threads_train,
                                                   batch_size=args.batch_size)
 
         dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
-                                   split_from=0.8, split_to=1, unfold=True)
+                                split_from=0.8, split_to=1, unfold=False)
         self._model.init_losses('Val', use_weighted_loss=False, dataset=dataset_val)
         self.data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                                 batch_size=args.batch_size)
+
+        dataset_val_unfold = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
+                                       split_from=0.8, split_to=1, unfold=True)
+        data_loader_val_unfold = WriterDataLoader(dataset_val_unfold, is_train=False, numb_threads=args.n_threads_train,
+                                                  batch_size=args.batch_size)
 
         self.early_stop = EarlyStop(args.early_stop)
         print("Training tasks {}".format(args.tasks))
         print("Training sets: {} images".format(len(dataset_train)))
         print("Validating sets: {} images".format(len(dataset_val)))
 
+        print("Validating unfold sets: {} images".format(len(dataset_val_unfold)))
         self._train()
+        self._model.load()
+
+        val_dict = self._validate(0, data_loader_val_unfold.get_dataloader(), mode='val_unfold')
+
+        for key in val_dict:
+            wandb.run.summary[f'best_model/{key}'] = val_dict[key]
+
+        print("Footprint val unfold: {:.4f}".format(val_dict['val_unfold/acc/footprint']))
 
     def _train(self):
         self._current_step = 0
@@ -62,7 +74,7 @@ class Trainer:
             if not i_epoch % args.n_epochs_per_eval == 0:
                 continue
 
-            val_dict = self._validate(i_epoch)
+            val_dict = self._validate(i_epoch, self.data_loader_val.get_dataloader())
             gc.collect()
 
             current_acc = val_dict['val/acc/footprint']
@@ -170,15 +182,14 @@ class Trainer:
                 self._display_terminal(iter_start_time, i_epoch, i_train_batch, len(data_loader), loss_dict)
                 self._last_save_time = time.time()
 
-    def _validate(self, i_epoch):
+    def _validate(self, i_epoch, val_loader, mode='val'):
         val_start_time = time.time()
         # set model to eval
         self._model.set_eval()
         val_errors = {}
         val_dict = {}
-        data_loader = self.data_loader_val.get_dataloader()
         all_accuracies = {}
-        for i_train_batch, train_batch in enumerate(data_loader):
+        for i_train_batch, train_batch in enumerate(val_loader):
             final_loss, log_info, accuracies = self._compute_loss(train_batch, log_data=i_train_batch == 0)
             for key in accuracies:
                 if key not in all_accuracies:
@@ -197,16 +208,16 @@ class Trainer:
 
         now_time = time.strftime("%H:%M", time.localtime(val_start_time))
         for k, v in val_errors.items():
-            output = "{} Validation {}: Epoch [{}] Step [{}] loss {:.4f}".format(
-                k, now_time, i_epoch, self._current_step, val_errors[k])
+            output = "{} {} {}: Epoch [{}] Step [{}] loss {:.4f}".format(
+                k, mode, now_time, i_epoch, self._current_step, val_errors[k])
             print(output)
-            val_dict[f'val/{k}'] = val_errors[k]
+            val_dict[f'{mode}/{k}'] = val_errors[k]
 
-        val_dict[f'val/loss'] =\
-            sum([self._model.normalize_lambda(t) * val_dict[f'val/loss_{t}'] for t in args.tasks])
+        val_dict[f'{mode}/loss'] =\
+            sum([self._model.normalize_lambda(t) * val_dict[f'{mode}/loss_{t}'] for t in args.tasks])
 
         for key in all_accuracies:
-            val_dict[f'val/acc/{key}'] = sum(all_accuracies[key]) / len(all_accuracies[key])
+            val_dict[f'{mode}/acc/{key}'] = sum(all_accuracies[key]) / len(all_accuracies[key])
 
         # set model back to train
         self._model.set_train()

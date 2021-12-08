@@ -25,12 +25,13 @@ class TMDataset(Dataset):
         temp_image_list = []
         for letter in letters:
             image_by_letter = glob.glob(os.path.join(self.gt_binarized_dir, f'{letter}_*.png'))
+            image_by_letter = sorted(image_by_letter)
             sp_from, sp_to = int(len(image_by_letter) * split_from), int(len(image_by_letter) * split_to)
             temp_image_list.append(image_by_letter[sp_from: sp_to])
 
         self.image_list = []
         for image_by_letter in tqdm(temp_image_list):
-            pos_anc, neg_anc = set({}), set({})
+            pos_anc = set({})
             for anchor in image_by_letter:
                 positive_image_list = []
                 negative_image_list = []
@@ -49,12 +50,10 @@ class TMDataset(Dataset):
                 else:
                     for pos_img in positive_image_list:
                         for neg_img in negative_image_list:
-                            if pos_img + anchor in pos_anc or anchor + pos_img in pos_anc \
-                                    or anchor + neg_img in neg_anc or neg_img + anchor in neg_anc:
+                            if pos_img + anchor + neg_img in pos_anc or anchor + pos_img + neg_img in pos_anc:
                                 continue
                             self.image_list.append(([pos_img], anchor, [neg_img]))
-                            pos_anc.add(pos_img + anchor)
-                            neg_anc.add(anchor + neg_img)
+                            pos_anc.add(pos_img + anchor + neg_img)
 
     def __getitem__(self, idx):
         # anchor
