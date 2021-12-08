@@ -1,12 +1,18 @@
-import os.path
-
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import torch
+from tqdm import tqdm
+
+import wandb
+import seaborn as sns
+import matplotlib.pylab as plt
+from matplotlib import cm
+import torch.nn.functional as F
 from sklearn.manifold import TSNE
 
 from dataset.data_loader import WriterDataLoader
 from dataset.image_dataset import ImageDataset
-from dataset.utils import idx_to_letter
 from model.model_factory import ModelsFactory
 from options.test_options import TestOptions
 from utils.transform import get_transforms
@@ -34,6 +40,12 @@ colour_map = [ "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941",
 
 class Trainer:
     def __init__(self):
+        wandb.init(group=args.group,
+                   project=args.wb_project,
+                   entity=args.wb_entity)
+        wandb.run.name = args.name
+        wandb.run.save()
+        wandb.config.update(args)
         device = torch.device('cuda' if args.cuda else 'cpu')
         self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=0.5)
         self._model.load_network(args.pretrained_model_path)
@@ -45,7 +57,7 @@ class Trainer:
                                                 batch_size=args.batch_size)
 
         print("Validating sets: {} images".format(len(dataset_val)))
-        os.makedirs(args.vis_dir, exist_ok=True)
+
         self._validate()
 
     def __get_data(self, batch_data, image_key, reconstruct_key, symbol_key):
@@ -61,47 +73,62 @@ class Trainer:
         self._model.set_eval()
         data_loader = self.data_loader_val.get_dataloader()
         embeddings = {}
-        for i_train_batch, train_batch in enumerate(data_loader):
+        for train_batch in tqdm(data_loader):
             input_data = self.__get_data(train_batch, 'img_anchor', 'bin_anchor', 'symbol')
             anchor_out, _ = self._model.compute_loss(input_data, criterion_mode='Val')
+            footprints = anchor_out['footprint'].detach().cpu()
             for i, symbol in enumerate(train_batch['symbol']):
-                symbol = symbol.item()
-                footprints = anchor_out['footprint'].detach().cpu()
-                if symbol not in embeddings:
-                    embeddings[symbol] = {}
+                # symbol = symbol.item()
+                # if symbol not in embeddings:
+                #     embeddings[symbol] = {}
                 tm_anchor = train_batch['tm_anchor'][i]
-                if tm_anchor not in embeddings[symbol]:
-                    embeddings[symbol][tm_anchor] = []
-                embeddings[symbol][tm_anchor].append(footprints[i])
+                if tm_anchor not in embeddings:
+                    embeddings[tm_anchor] = []
+                embeddings[tm_anchor].append(footprints[i])
 
-        for symbol in embeddings:
-            sym_embeddings = embeddings[symbol]
-            tms = list(sym_embeddings.keys())
-            tm_to_idx = {x: i for i, x in enumerate(tms)}
-            sym_embedding, tm_tensors = [], []
-            for tm in sym_embeddings:
-                tm_tensors += [tm_to_idx[tm] for _ in range(len(sym_embeddings[tm]))]
-                sym_embedding += sym_embeddings[tm]
+        tms = list(embeddings.keys())
+        tm_to_idx = {x: i for i, x in enumerate(tms)}
+        idx_to_tm = {i: x for i, x in enumerate(tms)}
+        sym_embedding, tm_tensors = [], []
+        for tm in embeddings:
+            tm_tensors += [tm_to_idx[tm] for _ in range(len(embeddings[tm]))]
+            sym_embedding += embeddings[tm]
 
-            footprints = torch.stack(sym_embedding, dim=0)
-            tm_tensors = torch.tensor(tm_tensors)
-            tsne = TSNE(2, verbose=1)
-            tsne_proj = tsne.fit_transform(footprints)
-            # Plot those points as a scatter plot and label them based on the pred labels
+        tm_distance_matrix = np.zeros((len(sym_embedding), len(sym_embedding)))
+        for tm1_idx, embedding_1 in enumerate(sym_embedding):
+            for tm2_idx, embedding_2 in enumerate(sym_embedding):
+                tm_distance_matrix[tm1_idx][tm2_idx] = F.mse_loss(embedding_1, embedding_2).item()
 
-            fig, ax = plt.subplots(figsize=(8, 8))
-            n_item_to_plot = 10
-            embedding_lens = [{'len': len(v), 'key': k} for k, v in sym_embeddings.items()]
-            embedding_lens = sorted(embedding_lens, key=lambda x: x['len'], reverse=True)
+        mask = np.zeros_like(tm_distance_matrix)
+        mask[np.triu_indices_from(mask)] = True
 
-            for count, item in enumerate(embedding_lens[:n_item_to_plot]):
-                idx = tm_to_idx[item['key']]
-                indices = tm_tensors == idx
-                ax.scatter(tsne_proj[indices, 0], tsne_proj[indices, 1], c=colour_map[count],
-                           label=item['key'], alpha=0.5)
-            ax.legend(fontsize='small', markerscale=2)
-            plt.title(f'Letter: {idx_to_letter[symbol]}')
-            plt.savefig(os.path.join(args.vis_dir, f'letter_{idx_to_letter[symbol]}.png'))
+        df = pd.DataFrame(tm_distance_matrix,
+                          columns=[idx_to_tm[tm_tensors[i]] for i in range(len(sym_embedding))],
+                          index=[idx_to_tm[tm_tensors[i]] for i in range(len(sym_embedding))])
+        df.to_csv('distance_matrix.csv')
+
+        with sns.axes_style("white"):
+            plt.figure(figsize=(11, 8))
+            ax = sns.heatmap(tm_distance_matrix, mask=mask, vmax=.3, square=True, cmap="YlGnBu")
+            plt.show()
+        # footprints = torch.stack(sym_embedding, dim=0)
+        # tm_tensors = torch.tensor(tm_tensors)
+        # tsne = TSNE(2, verbose=1)
+        # tsne_proj = tsne.fit_transform(footprints)
+        # # Plot those points as a scatter plot and label them based on the pred labels
+        #
+        # fig, ax = plt.subplots(figsize=(8, 8))
+        # n_item_to_plot = 10
+        # embedding_lens = [{'len': len(v), 'key': k} for k, v in embeddings.items()]
+        # embedding_lens = sorted(embedding_lens, key=lambda x: x['len'], reverse=True)
+        #
+        # for count, item in enumerate(embedding_lens[:n_item_to_plot]):
+        #     idx = tm_to_idx[item['key']]
+        #     indices = tm_tensors == idx
+        #     ax.scatter(tsne_proj[indices, 0], tsne_proj[indices, 1], c=colour_map[count],
+        #                label=item['key'], alpha=0.5)
+        # ax.legend(fontsize='small', markerscale=2)
+        # plt.show()
 
 
 if __name__ == "__main__":
