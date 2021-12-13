@@ -27,19 +27,22 @@ class Trainer:
         self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=0.5)
         transforms = get_transforms(args)
         dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
-                                  split_from=0, split_to=0.8)
+                                  split_from=0, split_to=0.8, min_n_sample_per_letter=args.min_n_sample_per_letter,
+                                  min_n_sample_per_class=args.min_n_sample_per_class)
         self._model.init_losses('Train', args.use_weighted_loss, dataset_train)
         self.data_loader_train = WriterDataLoader(dataset_train, is_train=True, numb_threads=args.n_threads_train,
                                                   batch_size=args.batch_size)
 
-        dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
-                                split_from=0.8, split_to=1, unfold=False)
+        dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0.8,
+                                split_to=1, unfold=False, min_n_sample_per_letter=args.min_n_sample_per_letter,
+                                min_n_sample_per_class=args.min_n_sample_per_class)
         self._model.init_losses('Val', use_weighted_loss=False, dataset=dataset_val)
         self.data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                                 batch_size=args.batch_size)
 
-        dataset_val_unfold = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
-                                       split_from=0.8, split_to=1, unfold=True)
+        dataset_val_unfold = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0.8,
+                                       split_to=1, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
+                                       min_n_sample_per_class=args.min_n_sample_per_class)
         data_loader_val_unfold = WriterDataLoader(dataset_val_unfold, is_train=False, numb_threads=args.n_threads_train,
                                                   batch_size=args.batch_size)
 

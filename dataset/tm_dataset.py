@@ -15,7 +15,8 @@ from dataset.utils import resize_image, letters, MAX_WIDTH, MAX_HEIGHT, MAX_BIN_
 
 class TMDataset(Dataset):
 
-    def __init__(self, gt_dir, gt_binarized_dir, filter_neg_file, transforms, split_from, split_to, unfold=False):
+    def __init__(self, gt_dir, gt_binarized_dir, filter_neg_file, transforms, split_from, split_to,
+                 unfold=False, min_n_sample_per_letter=0, min_n_sample_per_class=0):
         # Init folder dir
         self.gt_dir = gt_dir
         self.gt_binarized_dir = gt_binarized_dir
@@ -23,12 +24,27 @@ class TMDataset(Dataset):
 
         # Create image item
         temp_image_list = []
+        tm_map = {}
+        total_imgs_removing_by_letter = 0
         for letter in letters:
             image_by_letter = glob.glob(os.path.join(self.gt_binarized_dir, f'{letter}_*.png'))
+            if len(image_by_letter) < min_n_sample_per_letter:
+                # Ignore if number of samples per letter is less than min_n_sample_per_letter
+                total_imgs_removing_by_letter += len(image_by_letter)
+                continue
             image_by_letter = sorted(image_by_letter)
+            for img in image_by_letter:
+                tm = os.path.basename(img).split("_")[1]
+                if tm not in tm_map:
+                    tm_map[tm] = []
+                tm_map[tm].append(img)
             sp_from, sp_to = int(len(image_by_letter) * split_from), int(len(image_by_letter) * split_to)
             temp_image_list.append(image_by_letter[sp_from: sp_to])
 
+        tm_filter = set([k for k, v in tm_map.items() if len(v) < min_n_sample_per_class])
+        total_imgs_removing_by_class = sum([len(v) for k, v in tm_map.items() if len(v) < min_n_sample_per_class])
+        print(f'Total number of images removed by letter lever filter: {total_imgs_removing_by_letter}')
+        print(f'Total number of images removed by class lever filter: {total_imgs_removing_by_class}')
         self.image_list = []
         for image_by_letter in tqdm(temp_image_list):
             pos_anc = set({})
@@ -36,6 +52,8 @@ class TMDataset(Dataset):
                 positive_image_list = []
                 negative_image_list = []
                 anchor_tm = os.path.basename(anchor).split("_")[1]
+                if anchor_tm in tm_filter:
+                    continue
                 for img in image_by_letter:
                     img_tm = os.path.basename(img).split("_")[1]
                     if anchor == img:
