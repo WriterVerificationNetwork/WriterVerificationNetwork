@@ -106,6 +106,7 @@ class TMDataset(Dataset):
         return {
             'symbol': letter_to_idx[anchor.split("_")[0]],
             'img_anchor': img_anchor,
+            'anchor_path': anchor,
             'tm_anchor': anchor_tm,
             'bin_anchor': bin_anchor,
             'img_positive': img_positive,
