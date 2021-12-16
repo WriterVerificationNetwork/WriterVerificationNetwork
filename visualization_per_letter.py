@@ -16,6 +16,7 @@ from sklearn.manifold import TSNE
 from dataset.data_loader import WriterDataLoader
 from dataset.image_dataset import ImageDataset
 from dataset.tm_dataset import TMDataset
+from dataset.utils import idx_to_letter
 from model.model_factory import ModelsFactory
 from options.test_options import TestOptions
 from utils.transform import get_transforms
@@ -72,7 +73,7 @@ class Trainer:
             res['symbol'] = batch_data[symbol_key]
         return res
 
-    def plot_fig(self, embeddings, tm_tensors, tm_to_idx, tsne_proj, n_item_to_plot):
+    def plot_fig(self, embeddings, tm_tensors, tm_to_idx, tsne_proj, n_item_to_plot, letter):
 
         fig, ax = plt.subplots(figsize=(12, 12))
         embedding_lens = [{'len': len(v), 'key': k} for k, v in embeddings.items()]
@@ -84,62 +85,66 @@ class Trainer:
             ax.scatter(tsne_proj[indices, 0], tsne_proj[indices, 1], c=colour_map[count],
                        label=item['key'], alpha=0.5)
         ax.legend(fontsize='small', markerscale=2, bbox_to_anchor=(1, 1))
-        plt.savefig(os.path.join(args.vis_dir, f'{n_item_to_plot}.png'))
+        plt.title(f'Letter: {idx_to_letter[letter]}')
+        vis_dir = os.path.join(args.vis_dir, f'{n_item_to_plot}TMs')
+        os.makedirs(vis_dir, exist_ok=True)
+        plt.savefig(os.path.join(vis_dir, f'letter_{idx_to_letter[letter]}.png'))
 
     def _validate(self):
         # set model to eval
         self._model.set_eval()
         data_loader = self.data_loader_val.get_dataloader()
-        embeddings = {}
+        all_letters_embeddings = {}
         for train_batch in tqdm(data_loader):
             input_data = self.__get_data(train_batch, 'img_anchor', 'bin_anchor', 'symbol')
             anchor_out, _ = self._model.compute_loss(input_data, criterion_mode='Val')
             footprints = anchor_out['footprint'].detach().cpu()
             for i, symbol in enumerate(train_batch['symbol']):
-                # symbol = symbol.item()
-                # if symbol not in embeddings:
-                #     embeddings[symbol] = {}
+                symbol = symbol.item()
+                if symbol not in all_letters_embeddings:
+                    all_letters_embeddings[symbol] = {}
                 tm_anchor = train_batch['tm_anchor'][i]
-                if tm_anchor not in embeddings:
-                    embeddings[tm_anchor] = []
-                embeddings[tm_anchor].append(footprints[i])
+                if tm_anchor not in all_letters_embeddings[symbol]:
+                    all_letters_embeddings[symbol][tm_anchor] = []
+                all_letters_embeddings[symbol][tm_anchor].append(footprints[i])
 
-        tms = list(embeddings.keys())
-        tm_to_idx = {x: i for i, x in enumerate(tms)}
-        idx_to_tm = {i: x for i, x in enumerate(tms)}
-        sym_embedding, tm_tensors = [], []
-        for tm in embeddings:
-            tm_tensors += [tm_to_idx[tm] for _ in range(len(embeddings[tm]))]
-            sym_embedding += embeddings[tm]
+        for symbol in all_letters_embeddings:
+            embeddings = all_letters_embeddings[symbol]
+            tms = list(embeddings.keys())
+            tm_to_idx = {x: i for i, x in enumerate(tms)}
+            sym_embedding, tm_tensors = [], []
+            for tm in embeddings:
+                tm_tensors += [tm_to_idx[tm] for _ in range(len(embeddings[tm]))]
+                sym_embedding += embeddings[tm]
 
-        # tm_distance_matrix = np.zeros((len(sym_embedding), len(sym_embedding)))
-        # for tm1_idx, embedding_1 in enumerate(sym_embedding):
-        #     for tm2_idx, embedding_2 in enumerate(sym_embedding):
-        #         tm_distance_matrix[tm1_idx][tm2_idx] = F.mse_loss(embedding_1, embedding_2).item()
-        #
-        # mask = np.zeros_like(tm_distance_matrix)
-        # mask[np.triu_indices_from(mask)] = True
-        #
-        # with sns.axes_style("white"):
-        #     plt.figure(figsize=(11, 8))
-        #     ax = sns.heatmap(tm_distance_matrix, mask=mask, vmax=.3, square=True, cmap="YlGnBu")
-        #     plt.show()
-        #
-        # df = pd.DataFrame(tm_distance_matrix,
-        #                   columns=[idx_to_tm[tm_tensors[i]] for i in range(len(sym_embedding))],
-        #                   index=[idx_to_tm[tm_tensors[i]] for i in range(len(sym_embedding))])
-        # df.to_csv('distance_matrix.csv')
-        footprints = torch.stack(sym_embedding, dim=0)
-        tm_tensors = torch.tensor(tm_tensors)
-        tsne = TSNE(2, verbose=1)
-        tsne_proj = tsne.fit_transform(footprints)
-        # Plot those points as a scatter plot and label them based on the pred labels
+            # tm_distance_matrix = np.zeros((len(sym_embedding), len(sym_embedding)))
+            # for tm1_idx, embedding_1 in enumerate(sym_embedding):
+            #     for tm2_idx, embedding_2 in enumerate(sym_embedding):
+            #         tm_distance_matrix[tm1_idx][tm2_idx] = F.mse_loss(embedding_1, embedding_2).item()
+            #
+            # mask = np.zeros_like(tm_distance_matrix)
+            # mask[np.triu_indices_from(mask)] = True
+            #
+            # with sns.axes_style("white"):
+            #     plt.figure(figsize=(11, 8))
+            #     ax = sns.heatmap(tm_distance_matrix, mask=mask, vmax=.3, square=True, cmap="YlGnBu")
+            #     plt.show()
+            #
+            # df = pd.DataFrame(tm_distance_matrix,
+            #                   columns=[idx_to_tm[tm_tensors[i]] for i in range(len(sym_embedding))],
+            #                   index=[idx_to_tm[tm_tensors[i]] for i in range(len(sym_embedding))])
+            # df.to_csv('distance_matrix.csv')
+            footprints = torch.stack(sym_embedding, dim=0)
+            tm_tensors = torch.tensor(tm_tensors)
+            tsne = TSNE(2, verbose=1)
+            tsne_proj = tsne.fit_transform(footprints)
+            # Plot those points as a scatter plot and label them based on the pred labels
 
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 5)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 10)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 20)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 30)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 50)
+            self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 5, symbol)
+            self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 10, symbol)
+            self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 20, symbol)
+            self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 30, symbol)
+            self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 50, symbol)
 
 if __name__ == "__main__":
     trainer = Trainer()
