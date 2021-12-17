@@ -73,7 +73,7 @@ class TMDataset(Dataset):
                             for neg_img in negative_image_dict[neg_tm]:
                                 if pos_img + anchor + neg_img in pos_anc or anchor + pos_img + neg_img in pos_anc:
                                     continue
-                                self.image_list.append(([pos_img], anchor, {neg_tm: neg_img}))
+                                self.image_list.append(([pos_img], anchor, {neg_tm: [neg_img]}))
                                 pos_anc.add(pos_img + anchor + neg_img)
 
     def __getitem__(self, idx):
