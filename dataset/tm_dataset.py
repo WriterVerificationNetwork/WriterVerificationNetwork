@@ -50,7 +50,7 @@ class TMDataset(Dataset):
             pos_anc = set({})
             for anchor in image_by_letter:
                 positive_image_list = []
-                negative_image_list = []
+                negative_image_dict = {}
                 anchor_tm = os.path.basename(anchor).split("_")[1]
                 if anchor_tm in tm_filter:
                     continue
@@ -61,22 +61,27 @@ class TMDataset(Dataset):
                     if anchor_tm == img_tm:
                         positive_image_list.append(img)
                     else:
-                        negative_image_list.append(img)
+                        if img_tm not in negative_image_dict:
+                            negative_image_dict[img_tm] = []
+                        negative_image_dict[img_tm].append(img)
                 if not unfold:
-                    if len(positive_image_list) > 0 and len(negative_image_list) > 0:
-                        self.image_list.append((positive_image_list, anchor, negative_image_list))
+                    if len(positive_image_list) > 0 and len(negative_image_dict.keys()) > 0:
+                        self.image_list.append((positive_image_list, anchor, negative_image_dict))
                 else:
                     for pos_img in positive_image_list:
-                        for neg_img in negative_image_list:
-                            if pos_img + anchor + neg_img in pos_anc or anchor + pos_img + neg_img in pos_anc:
-                                continue
-                            self.image_list.append(([pos_img], anchor, [neg_img]))
-                            pos_anc.add(pos_img + anchor + neg_img)
+                        for neg_tm in negative_image_dict:
+                            for neg_img in negative_image_dict[neg_tm]:
+                                if pos_img + anchor + neg_img in pos_anc or anchor + pos_img + neg_img in pos_anc:
+                                    continue
+                                self.image_list.append(([pos_img], anchor, {neg_tm: neg_img}))
+                                pos_anc.add(pos_img + anchor + neg_img)
 
     def __getitem__(self, idx):
         # anchor
-        positive_image_list, anchor_img, negative_image_list = self.image_list[idx]
-        positive_img, negative_img = random.choice(positive_image_list), random.choice(negative_image_list)
+        positive_image_list, anchor_img, negative_image_dict = self.image_list[idx]
+        positive_img = random.choice(positive_image_list)
+        negative_tm = random.choice(list(negative_image_dict.keys()))
+        negative_img = random.choice(negative_image_dict[negative_tm])
 
         # anchor image
         moving_percent = random.randint(0, 10) / 10.
