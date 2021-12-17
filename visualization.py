@@ -84,7 +84,9 @@ class Trainer:
             ax.scatter(tsne_proj[indices, 0], tsne_proj[indices, 1], c=colour_map[count],
                        label=item['key'], alpha=0.5)
         ax.legend(fontsize='small', markerscale=2, bbox_to_anchor=(1, 1))
-        plt.savefig(os.path.join(args.vis_dir, f'{n_item_to_plot}.png'))
+        vis_dir = os.path.join(args.vis_dir, args.name)
+        os.makedirs(vis_dir, exist_ok=True)
+        plt.savefig(os.path.join(vis_dir, f'{n_item_to_plot}.png'))
 
     def _validate(self):
         # set model to eval
@@ -106,7 +108,6 @@ class Trainer:
 
         tms = list(embeddings.keys())
         tm_to_idx = {x: i for i, x in enumerate(tms)}
-        idx_to_tm = {i: x for i, x in enumerate(tms)}
         sym_embedding, tm_tensors = [], []
         for tm in embeddings:
             tm_tensors += [tm_to_idx[tm] for _ in range(len(embeddings[tm]))]
@@ -140,6 +141,7 @@ class Trainer:
         self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 20)
         self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 30)
         self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 50)
+
 
 if __name__ == "__main__":
     trainer = Trainer()
