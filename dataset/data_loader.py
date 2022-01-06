@@ -22,7 +22,7 @@ class WriterDataLoader:
         return DataLoader(
             self.dataset,
             batch_size=self.batch_size,
-            shuffle=sampler is not None,
+            shuffle=sampler is None,
             num_workers=int(self.numb_threads),
             sampler=sampler,
             pin_memory=True,
