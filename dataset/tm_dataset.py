@@ -46,6 +46,7 @@ class TMDataset(Dataset):
         print(f'Total number of images removed by letter lever filter: {total_imgs_removing_by_letter}')
         print(f'Total number of images removed by class lever filter: {total_imgs_removing_by_class}')
         self.image_list = []
+        self.anchor_tms = []
         for image_by_letter in tqdm(temp_image_list):
             pos_anc = set({})
             for anchor in image_by_letter:
@@ -67,6 +68,7 @@ class TMDataset(Dataset):
                 if not unfold:
                     if len(positive_image_list) > 0 and len(negative_image_dict.keys()) > 0:
                         self.image_list.append((positive_image_list, anchor, negative_image_dict))
+                        self.anchor_tms.append(anchor_tm)
                 else:
                     for pos_img in positive_image_list:
                         for neg_tm in negative_image_dict:
@@ -74,6 +76,7 @@ class TMDataset(Dataset):
                                 if pos_img + anchor + neg_img in pos_anc or anchor + pos_img + neg_img in pos_anc:
                                     continue
                                 self.image_list.append(([pos_img], anchor, {neg_tm: [neg_img]}))
+                                self.anchor_tms.append(anchor_tm)
                                 pos_anc.add(pos_img + anchor + neg_img)
 
     def __getitem__(self, idx):
