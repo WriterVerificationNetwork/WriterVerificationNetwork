@@ -34,7 +34,9 @@ class WriterDataLoader:
         bincount = dict(Counter(labels))
         key_list = list(bincount.keys())
         weight_map = 1 / np.asarray([bincount[x] for x in key_list])
-        weight_map = interp(weight_map, [np.min(weight_map), np.max(weight_map)], [1, weight_max])
+        weight_map = weight_map / np.min(weight_map) * 10
+        weight_map = np.log10(weight_map)
+        # weight_map = interp(weight_map, [np.min(weight_map), np.max(weight_map)], [1, weight_max])
         weights = []
         for key in labels:
             weights.append(weight_map[key_list.index(key)])
