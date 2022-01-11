@@ -24,7 +24,7 @@ class Trainer:
         transforms = get_transforms(args)
         dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
                                   split_from=0, split_to=0.8, min_n_sample_per_letter=args.min_n_sample_per_letter,
-                                  min_n_sample_per_class=args.min_n_sample_per_class)
+                                  min_n_sample_per_class=args.min_n_sample_per_class, without_imgs=True)
         self._model.init_losses('Train', args.use_weighted_loss, dataset_train)
         self.data_loader_train = WriterDataLoader(dataset_train, is_train=True, numb_threads=args.n_threads_train,
                                                   batch_size=args.batch_size, using_sampler=args.use_sampler)
@@ -47,7 +47,7 @@ class Trainer:
         df = pd.DataFrame({'TMs': all_categories})
         df.plot(kind='bar',
                   stacked=False,
-                  title=f'PSPI - Weight max: {args.pspi_sampler_weight_max}, Drop lv0 rate: {args.lv0_drop_rate}')
+                  title=f'Weight max: 30')
         plt.show()
 
 

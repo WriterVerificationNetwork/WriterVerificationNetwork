@@ -16,11 +16,12 @@ from dataset.utils import resize_image, letters, MAX_WIDTH, MAX_HEIGHT, MAX_BIN_
 class TMDataset(Dataset):
 
     def __init__(self, gt_dir, gt_binarized_dir, filter_neg_file, transforms, split_from, split_to,
-                 unfold=False, min_n_sample_per_letter=0, min_n_sample_per_class=0):
+                 unfold=False, min_n_sample_per_letter=0, min_n_sample_per_class=0, without_imgs=False):
         # Init folder dir
         self.gt_dir = gt_dir
         self.gt_binarized_dir = gt_binarized_dir
         self.transforms = transforms
+        self.without_imgs = without_imgs
 
         # Create image item
         temp_image_list = []
@@ -90,6 +91,12 @@ class TMDataset(Dataset):
         moving_percent = random.randint(0, 10) / 10.
         anchor = os.path.basename(anchor_img)
         anchor_tm = anchor.split("_")[1]
+        if self.without_imgs:
+            return {
+                'symbol': letter_to_idx[anchor.split("_")[0]],
+                'anchor_path': anchor,
+                'tm_anchor': anchor_tm
+            }
         img_anchor = get_image(os.path.join(self.gt_dir, anchor.split("_")[0], anchor),
                                self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
         bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor),

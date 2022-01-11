@@ -29,7 +29,7 @@ class WriterDataLoader:
             drop_last=self._is_train)
 
     @staticmethod
-    def get_sampler(dataset, weight_max=10):
+    def get_sampler(dataset, weight_max=30):
         labels = dataset.anchor_tms
         bincount = dict(Counter(labels))
         key_list = list(bincount.keys())
