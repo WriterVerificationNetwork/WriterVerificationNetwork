@@ -53,8 +53,8 @@ class TMDataset(Dataset):
         print(f'Total number of images removed by letter lever filter: {total_imgs_removing_by_letter}')
         print(f'Total number of images removed by class lever filter: {total_imgs_removing_by_class}')
 
-        positive_tms = {x: [x] for x in tm_map.keys()}
-        negative_tms = {x: [] for x in tm_map.keys()}
+        positive_tms = {x: set([x]) for x in tm_map.keys()}
+        negative_tms = {x: set([]) for x in tm_map.keys()}
         with open(filter_file) as f:
             triplet_filter = json.load(f)
 
@@ -66,11 +66,16 @@ class TMDataset(Dataset):
                 if current_tm == '' or second_tm == '':
                     continue
                 if relationship == 4:
-                    negative_tms[current_tm].append(second_tm)
-                    negative_tms[second_tm].append(current_tm)
+                    negative_tms[current_tm].add(second_tm)
+                    negative_tms[second_tm].add(current_tm)
                 if relationship == 1:
-                    positive_tms[current_tm].append(second_tm)
-                    positive_tms[second_tm].append(current_tm)
+                    positive_tms[current_tm].add(second_tm)
+                    positive_tms[second_tm].add(current_tm)
+
+        same_categories = ['60764', '60891', '60842', '60934']
+        for tm in same_categories:
+            for tm2 in same_categories:
+                positive_tms[tm].add(tm2)
 
         self.image_list = []
         for image_by_letter in tqdm(temp_image_list):
