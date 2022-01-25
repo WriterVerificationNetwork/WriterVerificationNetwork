@@ -75,7 +75,7 @@ class Criterion:
         elif loss.lower() == 'mse':
             loss_func = nn.MSELoss(reduction=self.reduction)
         elif loss.lower() == 'mae':
-            loss_func = nn.MSELoss(reduction=self.reduction)
+            loss_func = nn.L1Loss(reduction=self.reduction)
         elif loss.lower() == 'l1' or loss.lower() == 'l1_loss':
             loss_func = nn.L1Loss(reduction=self.reduction)
         elif loss.lower() == 'triplet':

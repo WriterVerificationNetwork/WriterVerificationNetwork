@@ -1,4 +1,5 @@
 import glob
+import json
 import os
 import random
 from datetime import datetime
@@ -15,77 +16,90 @@ from dataset.utils import resize_image, letters, MAX_WIDTH, MAX_HEIGHT, MAX_BIN_
 
 class TMDataset(Dataset):
 
-    def __init__(self, gt_dir, gt_binarized_dir, filter_neg_file, transforms, split_from, split_to,
+    def __init__(self, gt_dir, gt_binarized_dir, filter_file, transforms, split_from, split_to,
                  unfold=False, min_n_sample_per_letter=0, min_n_sample_per_class=0, without_imgs=False):
         # Init folder dir
         self.gt_dir = gt_dir
         self.gt_binarized_dir = gt_binarized_dir
         self.transforms = transforms
         self.without_imgs = without_imgs
+        self.anchor_tms = []
 
         # Create image item
         temp_image_list = []
         tm_map = {}
+        letter_tm_map = {}
         total_imgs_removing_by_letter = 0
         for letter in letters:
-            image_by_letter = glob.glob(os.path.join(self.gt_binarized_dir, f'{letter}_*.png'))
+            image_by_letter = glob.glob(os.path.join(self.gt_dir, f'{letter}_*.png'))
             if len(image_by_letter) < min_n_sample_per_letter:
                 # Ignore if number of samples per letter is less than min_n_sample_per_letter
                 total_imgs_removing_by_letter += len(image_by_letter)
                 continue
             image_by_letter = sorted(image_by_letter)
+            letter_tm_map[letter] = {}
             for img in image_by_letter:
                 tm = os.path.basename(img).split("_")[1]
                 if tm not in tm_map:
                     tm_map[tm] = []
+                if tm not in letter_tm_map[letter]:
+                    letter_tm_map[letter][tm] = []
                 tm_map[tm].append(img)
+                letter_tm_map[letter][tm].append(img)
             sp_from, sp_to = int(len(image_by_letter) * split_from), int(len(image_by_letter) * split_to)
             temp_image_list.append(image_by_letter[sp_from: sp_to])
-
         tm_filter = set([k for k, v in tm_map.items() if len(v) < min_n_sample_per_class])
         total_imgs_removing_by_class = sum([len(v) for k, v in tm_map.items() if len(v) < min_n_sample_per_class])
         print(f'Total number of images removed by letter lever filter: {total_imgs_removing_by_letter}')
         print(f'Total number of images removed by class lever filter: {total_imgs_removing_by_class}')
+
+        positive_tms = {x: [x] for x in tm_map.keys()}
+        negative_tms = {x: [] for x in tm_map.keys()}
+        with open(filter_file) as f:
+            triplet_filter = json.load(f)
+
+        for item in triplet_filter['relations']:
+            current_tm = item['category']
+            for second_item in item['relations']:
+                second_tm = second_item['category']
+                relationship = second_item['relationship']
+                if current_tm == '' or second_tm == '':
+                    continue
+                if relationship == 4:
+                    negative_tms[current_tm].append(second_tm)
+                    negative_tms[second_tm].append(current_tm)
+                if relationship == 1:
+                    positive_tms[current_tm].append(second_tm)
+                    positive_tms[second_tm].append(current_tm)
+
         self.image_list = []
-        self.anchor_tms = []
         for image_by_letter in tqdm(temp_image_list):
-            pos_anc = set({})
             for anchor in image_by_letter:
-                positive_image_list = []
-                negative_image_dict = {}
                 anchor_tm = os.path.basename(anchor).split("_")[1]
                 if anchor_tm in tm_filter:
                     continue
-                for img in image_by_letter:
-                    img_tm = os.path.basename(img).split("_")[1]
-                    if anchor == img:
-                        continue
-                    if anchor_tm == img_tm:
-                        positive_image_list.append(img)
-                    else:
-                        if img_tm not in negative_image_dict:
-                            negative_image_dict[img_tm] = []
-                        negative_image_dict[img_tm].append(img)
-                if not unfold:
-                    if len(positive_image_list) > 0 and len(negative_image_dict.keys()) > 0:
-                        self.image_list.append((positive_image_list, anchor, negative_image_dict))
-                        self.anchor_tms.append(anchor_tm)
-                else:
-                    for pos_img in positive_image_list:
-                        for neg_tm in negative_image_dict:
-                            for neg_img in negative_image_dict[neg_tm]:
-                                if pos_img + anchor + neg_img in pos_anc or anchor + pos_img + neg_img in pos_anc:
-                                    continue
-                                self.image_list.append(([pos_img], anchor, {neg_tm: [neg_img]}))
-                                self.anchor_tms.append(anchor_tm)
-                                pos_anc.add(pos_img + anchor + neg_img)
+                anchor_letter = os.path.basename(anchor).split("_")[0]
+                img_negative_tms = set(letter_tm_map[anchor_letter].keys()).intersection(negative_tms[anchor_tm])
+                if len(img_negative_tms) > 0:
+                    self.image_list.append(anchor)
+                    self.anchor_tms.append(anchor_tm)
+        self.letter_tm_map = letter_tm_map
+        self.positive_tms = positive_tms
+        self.negative_tms = negative_tms
 
     def __getitem__(self, idx):
         # anchor
-        positive_image_list, anchor_img, negative_image_dict = self.image_list[idx]
-        positive_img = random.choice(positive_image_list)
-        negative_tm = random.choice(list(negative_image_dict.keys()))
-        negative_img = random.choice(negative_image_dict[negative_tm])
+        anchor_img = self.image_list[idx]
+        anchor = os.path.basename(anchor_img)
+        anchor_tm = anchor.split("_")[1]
+        anchor_letter = anchor.split("_")[0]
+
+        positive_tms = set(self.letter_tm_map[anchor_letter].keys()).intersection(self.positive_tms[anchor_tm])
+        positive_tm = random.choice(list(positive_tms))
+        positive_img = random.choice(self.letter_tm_map[anchor_letter][positive_tm])
+        negative_tms = set(self.letter_tm_map[anchor_letter].keys()).intersection(self.negative_tms[anchor_tm])
+        negative_tm = random.choice(list(negative_tms))
+        negative_img = random.choice(self.letter_tm_map[anchor_letter][negative_tm])
 
         # anchor image
         moving_percent = random.randint(0, 10) / 10.
@@ -97,7 +111,7 @@ class TMDataset(Dataset):
                 'anchor_path': anchor,
                 'tm_anchor': anchor_tm
             }
-        img_anchor = get_image(os.path.join(self.gt_dir, anchor.split("_")[0], anchor),
+        img_anchor = get_image(os.path.join(self.gt_dir, anchor),
                                self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
         bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor),
                                self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True, mov=moving_percent)
@@ -105,7 +119,7 @@ class TMDataset(Dataset):
         # positive image
         moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(positive_img)
-        img_positive = get_image(os.path.join(self.gt_dir, img.split("_")[0], img),
+        img_positive = get_image(os.path.join(self.gt_dir, img),
                                  self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
         bin_positive = get_image(os.path.join(self.gt_binarized_dir, img),
                                  self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True, mov=moving_percent)
@@ -113,7 +127,7 @@ class TMDataset(Dataset):
         # negative image
         moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(negative_img)
-        img_negative = get_image(os.path.join(self.gt_dir, img.split("_")[0], img),
+        img_negative = get_image(os.path.join(self.gt_dir, img),
                                  self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
         bin_negative = get_image(os.path.join(self.gt_binarized_dir, img),
                                  self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True, mov=moving_percent)

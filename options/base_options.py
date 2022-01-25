@@ -39,7 +39,7 @@ class BaseOptions:
                                   help='Run eval every n training epochs')
         self._parser.add_argument('--weight_decay', type=float, default=0., help='weight decay')
         self._parser.add_argument('--tasks', type=str, default=['reconstruct', 'symbol', 'footprint'], nargs="+")
-        self._parser.add_argument('--criterion', type=str, default=['mse', 'ce', 'triplet'], nargs="+")
+        self._parser.add_argument('--criterion', type=str, default=['mae', 'ce', 'triplet'], nargs="+")
         self._parser.add_argument('--lambda_task', type=float, default=[1, 1, 1], nargs="+")
         self._parser.add_argument('--bin_weight', type=float, default=5)
         self._parser.add_argument('--use_weighted_loss', action='store_true', help='Enable using weighted losses')
