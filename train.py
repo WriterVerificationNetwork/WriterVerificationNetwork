@@ -93,7 +93,7 @@ class Trainer:
             print('End of epoch %d / %d \t Time Taken: %d sec (%d min or %d h)' %
                   (i_epoch, args.nepochs, time_epoch, time_epoch / 60, time_epoch / 3600))
 
-            if self.early_stop.should_stop(1 - current_acc):
+            if self.early_stop.should_stop(current_loss):
                 print(f'Early stop at epoch {i_epoch}')
                 break
 
