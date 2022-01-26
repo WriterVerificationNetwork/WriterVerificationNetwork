@@ -38,6 +38,7 @@ class WriterDataLoader:
         weight_map = np.log10(weight_map)
         weight_map = interp(weight_map, [np.min(weight_map), np.max(weight_map)], [1, weight_max])
         weights = []
+        print(f'Weight map applied: {weight_map}')
         for key in labels:
             weights.append(weight_map[key_list.index(key)])
         sampler = WeightedRandomSampler(weights, len(labels), replacement=True)
