@@ -14,17 +14,17 @@ class WriterDataLoader:
         self.numb_threads = numb_threads
         self.dataset = dataset
         self.use_sampler = using_sampler
+        self.sampler = None
+        if using_sampler:
+            self.sampler = WriterDataLoader.get_sampler(self.dataset)
 
     def get_dataloader(self):
-        sampler = None
-        if self.use_sampler:
-            sampler = WriterDataLoader.get_sampler(self.dataset)
         return DataLoader(
             self.dataset,
             batch_size=self.batch_size,
-            shuffle=sampler is None,
+            shuffle=self.sampler is None,
             num_workers=int(self.numb_threads),
-            sampler=sampler,
+            sampler=self.sampler,
             pin_memory=True,
             drop_last=self._is_train)
 

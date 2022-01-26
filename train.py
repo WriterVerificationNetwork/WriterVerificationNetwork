@@ -65,7 +65,7 @@ class Trainer:
     def _train(self):
         self._current_step = 0
         self._last_save_time = time.time()
-        best_val_acc = 0.
+        best_val_loss = 99999
         for i_epoch in range(1, args.nepochs + 1):
             epoch_start_time = time.time()
             self._model.get_current_lr()
@@ -80,10 +80,10 @@ class Trainer:
             val_dict = self._validate(i_epoch, self.data_loader_val.get_dataloader())
             gc.collect()
 
-            current_acc = val_dict['val/acc/footprint']
-            if current_acc > best_val_acc:
-                print("Footprint val acc improved, from {:.4f} to {:.4f}".format(best_val_acc, current_acc))
-                best_val_acc = current_acc
+            current_loss = val_dict['val/loss_footprint']
+            if current_loss < best_val_loss:
+                print("Footprint val loss improved, from {:.4f} to {:.4f}".format(best_val_loss, current_loss))
+                best_val_loss = current_loss
                 for key in val_dict:
                     wandb.run.summary[f'best_model/{key}'] = val_dict[key]
                 self._model.save()  # save best model
@@ -93,7 +93,7 @@ class Trainer:
             print('End of epoch %d / %d \t Time Taken: %d sec (%d min or %d h)' %
                   (i_epoch, args.nepochs, time_epoch, time_epoch / 60, time_epoch / 3600))
 
-            if self.early_stop.should_stop(1 - current_acc):
+            if self.early_stop.should_stop(current_loss):
                 print(f'Early stop at epoch {i_epoch}')
                 break
 
