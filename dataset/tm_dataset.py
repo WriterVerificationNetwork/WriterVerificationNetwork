@@ -72,10 +72,10 @@ class TMDataset(Dataset):
                     positive_tms[current_tm].add(second_tm)
                     positive_tms[second_tm].add(current_tm)
 
-        same_categories = ['60764', '60891', '60842', '60934']
-        for tm in same_categories:
-            for tm2 in same_categories:
-                positive_tms[tm].add(tm2)
+        # same_categories = ['60764', '60891', '60842', '60934']
+        # for tm in same_categories:
+        #     for tm2 in same_categories:
+        #         positive_tms[tm].add(tm2)
 
         self.image_list = []
         for image_by_letter in tqdm(temp_image_list):
