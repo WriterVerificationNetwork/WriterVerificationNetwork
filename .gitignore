@@ -156,3 +156,4 @@ fabric.properties
 wandb
 checkpoints
 distance_matrix.csv
+*.triplet
