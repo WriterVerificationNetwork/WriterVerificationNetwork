@@ -60,8 +60,14 @@ class TMDataset(Dataset):
 
         for item in triplet_filter['relations']:
             current_tm = item['category']
+            if current_tm not in tm_map:
+                print(f'TM {current_tm} is not available on the training dataset')
+                continue
             for second_item in item['relations']:
                 second_tm = second_item['category']
+                if second_tm not in tm_map:
+                    print(f'TM {second_tm} is not available on the training dataset')
+                    continue
                 relationship = second_item['relationship']
                 if current_tm == '' or second_tm == '':
                     continue
@@ -72,10 +78,10 @@ class TMDataset(Dataset):
                     positive_tms[current_tm].add(second_tm)
                     positive_tms[second_tm].add(current_tm)
 
-        same_categories = ['60764', '60891', '60842', '60934']
-        for tm in same_categories:
-            for tm2 in same_categories:
-                positive_tms[tm].add(tm2)
+        # same_categories = ['60764', '60891', '60842', '60934']
+        # for tm in same_categories:
+        #     for tm2 in same_categories:
+        #         positive_tms[tm].add(tm2)
 
         self.image_list = []
         for image_by_letter in tqdm(temp_image_list):

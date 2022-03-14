@@ -1,8 +1,14 @@
 import gc
 import time
+from io import BytesIO
 
+import cv2
+import numpy as np
 import torch
 import wandb
+from matplotlib import pyplot as plt
+from sklearn.manifold import TSNE
+from tqdm import tqdm
 
 from dataset.data_loader import WriterDataLoader
 from dataset.tm_dataset import TMDataset
@@ -13,6 +19,24 @@ from utils.transform import get_transforms
 from utils.wb_utils import log_prediction
 
 args = TrainOptions().parse()
+
+colour_map = [ "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
+        "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
+        "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
+        "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
+        "#DDEFFF", "#000035", "#7B4F4B", "#A1C299", "#300018", "#0AA6D8", "#013349", "#00846F",
+        "#372101", "#FFB500", "#C2FFED", "#A079BF", "#CC0744", "#C0B9B2", "#C2FF99", "#001E09",
+        "#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", "#B77B68", "#7A87A1", "#788D66",
+        "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C",
+
+        "#34362D", "#B4A8BD", "#00A6AA", "#452C2C", "#636375", "#A3C8C9", "#FF913F", "#938A81",
+        "#575329", "#00FECF", "#B05B6F", "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00",
+        "#7900D7", "#A77500", "#6367A9", "#A05837", "#6B002C", "#772600", "#D790FF", "#9B9700",
+        "#549E79", "#FFF69F", "#201625", "#72418F", "#BC23FF", "#99ADC0", "#3A2465", "#922329",
+        "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C",
+        "#83AB58", "#001C1E", "#D1F7CE", "#004B28", "#C8D0F6", "#A3A489", "#806C66", "#222800",
+        "#BF5650", "#E83000", "#66796D", "#DA007C", "#FF1A59", "#8ADBB4", "#1E0200", "#5B4E51",
+        "#C895C5", "#320033", "#FF6832", "#66E1D3", "#CFCDAC", "#D0AC94", "#7ED379", "#012C58"]
 
 
 class Trainer:
@@ -87,6 +111,8 @@ class Trainer:
                 for key in val_dict:
                     wandb.run.summary[f'best_model/{key}'] = val_dict[key]
                 self._model.save()  # save best model
+                self._visualize(0, 1, "all_data")
+                self._visualize(0.8, 1, "val_set")
 
             # print epoch info
             time_epoch = time.time() - epoch_start_time
@@ -184,6 +210,67 @@ class Trainer:
                 wandb.log(save_dict, step=self._current_step)
                 self._display_terminal(iter_start_time, i_epoch, i_train_batch, len(data_loader), loss_dict)
                 self._last_save_time = time.time()
+
+    def plot_fig(self, embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_type, n_item_to_plot):
+        fig, ax = plt.subplots(figsize=(12, 12))
+        embedding_lens = [{'len': len(v), 'key': k} for k, v in embeddings.items()]
+        embedding_lens = sorted(embedding_lens, key=lambda x: x['len'], reverse=True)
+
+        for count, item in enumerate(embedding_lens[:n_item_to_plot]):
+            idx = tm_to_idx[item['key']]
+            indices = tm_tensors == idx
+            ax.scatter(tsne_proj[indices, 0], tsne_proj[indices, 1], c=colour_map[count],
+                       label=item['key'], alpha=0.5)
+        ax.legend(fontsize='small', markerscale=2, bbox_to_anchor=(1, 1))
+        image_data = BytesIO()  # Create empty in-memory file
+        fig.savefig(image_data, format='png', dpi=100)  # Save pyplot figure to in-memory file
+        image_data.seek(0)  # Move stream position back to beginning of file
+        file_bytes = np.asarray(bytearray(image_data.read()), dtype=np.uint8)
+        plt.close(fig)
+        cv2_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        wandb.log({f"{viz_type}_{n_item_to_plot}": wandb.Image(cv2_img)}, step=self._current_step)
+
+    def _visualize(self, split_from, split_to, viz_name):
+        self._model.set_eval()
+        transforms = get_transforms(args)
+        dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
+                                split_from=split_from,
+                                split_to=split_to, unfold=False, min_n_sample_per_letter=args.min_n_sample_per_letter,
+                                min_n_sample_per_class=args.min_n_sample_per_class)
+        data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
+                                           batch_size=args.batch_size)
+        embeddings = {}
+        for train_batch in tqdm(data_loader_val):
+            input_data = self.__get_data(train_batch, 'img_anchor', 'bin_anchor', 'symbol')
+            anchor_out, _ = self._model.compute_loss(input_data, criterion_mode='Val')
+            footprints = anchor_out['footprint'].detach().cpu()
+            for i, symbol in enumerate(train_batch['symbol']):
+                # symbol = symbol.item()
+                # if symbol not in embeddings:
+                #     embeddings[symbol] = {}
+                tm_anchor = train_batch['tm_anchor'][i]
+                if tm_anchor not in embeddings:
+                    embeddings[tm_anchor] = []
+                embeddings[tm_anchor].append(footprints[i])
+
+        tms = list(embeddings.keys())
+        tm_to_idx = {x: i for i, x in enumerate(tms)}
+        sym_embedding, tm_tensors = [], []
+        for tm in embeddings:
+            tm_tensors += [tm_to_idx[tm] for _ in range(len(embeddings[tm]))]
+            sym_embedding += embeddings[tm]
+
+        footprints = torch.stack(sym_embedding, dim=0)
+        tm_tensors = torch.tensor(tm_tensors)
+        tsne = TSNE(2, verbose=1)
+        tsne_proj = tsne.fit_transform(footprints)
+        # Plot those points as a scatter plot and label them based on the pred labels
+
+        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_name, 5)
+        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_name, 10)
+        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_name, 20)
+        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_name, 30)
+        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_name, 50)
 
     def _validate(self, i_epoch, val_loader, mode='val'):
         val_start_time = time.time()
