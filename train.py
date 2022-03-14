@@ -211,7 +211,7 @@ class Trainer:
                 self._display_terminal(iter_start_time, i_epoch, i_train_batch, len(data_loader), loss_dict)
                 self._last_save_time = time.time()
 
-    def plot_fig(self, embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_type, n_item_to_plot):
+    def plot_fig(self, embeddings, tm_tensors, tm_to_idx, tsne_proj, n_item_to_plot):
         fig, ax = plt.subplots(figsize=(12, 12))
         embedding_lens = [{'len': len(v), 'key': k} for k, v in embeddings.items()]
         embedding_lens = sorted(embedding_lens, key=lambda x: x['len'], reverse=True)
@@ -227,8 +227,7 @@ class Trainer:
         image_data.seek(0)  # Move stream position back to beginning of file
         file_bytes = np.asarray(bytearray(image_data.read()), dtype=np.uint8)
         plt.close(fig)
-        cv2_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-        wandb.log({f"{viz_type}_{n_item_to_plot}": wandb.Image(cv2_img)}, step=self._current_step)
+        return cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
     def _visualize(self, split_from, split_to, viz_name):
         self._model.set_eval()
@@ -267,11 +266,16 @@ class Trainer:
         tsne_proj = tsne.fit_transform(footprints)
         # Plot those points as a scatter plot and label them based on the pred labels
 
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_name, 5)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_name, 10)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_name, 20)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_name, 30)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, viz_name, 50)
+        tm_5 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 5)
+        tm_10 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 10)
+        tm_20 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 20)
+        tm_30 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 30)
+        tm_50 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 50)
+        columns = ['5TMs', '10TMs', '20TMs', '30TMs', '50TMs']
+        wb_table = wandb.Table(columns=columns)
+        wb_table.add_data(wandb.Image(tm_5), wandb.Image(tm_10), wandb.Image(tm_20), wandb.Image(tm_30),
+                          wandb.Image(tm_50))
+        wandb.log({f'{viz_name}': wb_table}, step=self._current_step)
 
     def _validate(self, i_epoch, val_loader, mode='val'):
         val_start_time = time.time()
