@@ -239,8 +239,9 @@ class Trainer:
                                 min_n_sample_per_class=args.min_n_sample_per_class)
         data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                            batch_size=args.batch_size)
+        data_loader = data_loader_val.get_dataloader()
         embeddings = {}
-        for train_batch in tqdm(data_loader_val):
+        for train_batch in tqdm(data_loader):
             input_data = self.__get_data(train_batch, 'img_anchor', 'bin_anchor', 'symbol')
             anchor_out, _ = self._model.compute_loss(input_data, criterion_mode='Val')
             footprints = anchor_out['footprint'].detach().cpu()
