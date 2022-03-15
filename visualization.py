@@ -1,4 +1,6 @@
+import csv
 import os
+import random
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,7 +55,7 @@ class Trainer:
         self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=0.5)
         self._model.load_network(args.pretrained_model_path)
         transforms = get_transforms(args)
-        dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0,
+        dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0.8,
                                 split_to=1, unfold=False, min_n_sample_per_letter=args.min_n_sample_per_letter,
                                 min_n_sample_per_class=args.min_n_sample_per_class)
         self._model.init_losses('Val', use_weighted_loss=False, dataset=dataset_val)
@@ -88,6 +90,24 @@ class Trainer:
         os.makedirs(vis_dir, exist_ok=True)
         plt.savefig(os.path.join(vis_dir, f'{n_item_to_plot}.png'))
 
+    def compute_tms_distances(self, embeddings, n_testing_items=10):
+        all_tms = list(embeddings.keys())
+        distance_func = torch.nn.MSELoss()
+        results = []
+        for i in range(len(all_tms)):
+            source_tm = all_tms[i]
+            for j in range(i + 1, len(all_tms)):
+                target_tm = all_tms[j]
+                distances = []
+                for _ in range(3 * n_testing_items):
+                    source_features = torch.stack(random.sample(embeddings[source_tm], n_testing_items))
+                    target_features = torch.stack(random.sample(embeddings[target_tm], n_testing_items))
+                    distances.append(distance_func(source_features, target_features))
+
+                avg_distance = sum(distances) / len(distances)
+                results.append({'source': source_tm, 'target': target_tm, 'distance': avg_distance.item()})
+        return results
+
     def _validate(self):
         # set model to eval
         self._model.set_eval()
@@ -105,6 +125,11 @@ class Trainer:
                 if tm_anchor not in embeddings:
                     embeddings[tm_anchor] = []
                 embeddings[tm_anchor].append(footprints[i])
+        distance_data = self.compute_tms_distances(embeddings)
+        with open('tm_distance.csv', 'w') as f:
+            csv_file = csv.DictWriter(f, fieldnames=list(distance_data[0].keys()))
+            csv_file.writeheader()
+            csv_file.writerows(distance_data)
 
         tms = list(embeddings.keys())
         tm_to_idx = {x: i for i, x in enumerate(tms)}
