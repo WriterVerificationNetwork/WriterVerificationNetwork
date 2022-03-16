@@ -4,7 +4,7 @@ import os
 import random
 from datetime import datetime
 from pathlib import Path
-
+import imagesize
 import openpyxl
 import torchvision
 from PIL import Image, ImageOps
@@ -39,6 +39,9 @@ class TMDataset(Dataset):
             image_by_letter = sorted(image_by_letter)
             letter_tm_map[letter] = {}
             for img in image_by_letter:
+                width, height = imagesize.get(img)
+                if width < 100 and height < 100:
+                    continue
                 tm = os.path.basename(img).split("_")[1]
                 if tm not in tm_map:
                     tm_map[tm] = []
@@ -88,6 +91,8 @@ class TMDataset(Dataset):
             for anchor in image_by_letter:
                 anchor_tm = os.path.basename(anchor).split("_")[1]
                 if anchor_tm in tm_filter:
+                    continue
+                if anchor_tm not in negative_tms:
                     continue
                 anchor_letter = os.path.basename(anchor).split("_")[0]
                 img_negative_tms = set(letter_tm_map[anchor_letter].keys()).intersection(negative_tms[anchor_tm])

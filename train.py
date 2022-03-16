@@ -1,9 +1,11 @@
 import gc
+import random
 import time
 from io import BytesIO
 
 import cv2
 import numpy as np
+import pandas as pd
 import torch
 import wandb
 from matplotlib import pyplot as plt
@@ -229,6 +231,24 @@ class Trainer:
         plt.close(fig)
         return cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
+    def compute_tms_distances(self, embeddings, n_testing_items=10):
+        all_tms = list(embeddings.keys())
+        distance_func = torch.nn.MSELoss()
+        results = []
+        for i in range(len(all_tms)):
+            source_tm = all_tms[i]
+            for j in range(i + 1, len(all_tms)):
+                target_tm = all_tms[j]
+                distances = []
+                for _ in range(3 * n_testing_items):
+                    source_features = torch.stack(random.sample(embeddings[source_tm], n_testing_items))
+                    target_features = torch.stack(random.sample(embeddings[target_tm], n_testing_items))
+                    distances.append(distance_func(source_features, target_features))
+
+                avg_distance = sum(distances) / len(distances)
+                results.append({'source': source_tm, 'target': target_tm, 'distance': avg_distance.item()})
+        return results
+
     def _visualize(self, split_from, split_to, viz_name):
         self._model.set_eval()
         transforms = get_transforms(args)
@@ -252,6 +272,10 @@ class Trainer:
                 if tm_anchor not in embeddings:
                     embeddings[tm_anchor] = []
                 embeddings[tm_anchor].append(footprints[i])
+        distance_data = self.compute_tms_distances(embeddings)
+        distance_data = sorted(distance_data, key=lambda x: x['distance'])
+        distance_table = wandb.Table(dataframe=pd.DataFrame(distance_data))
+        wandb.log({f'distance_{viz_name}': distance_table}, step=self._current_step)
 
         tms = list(embeddings.keys())
         tm_to_idx = {x: i for i, x in enumerate(tms)}
