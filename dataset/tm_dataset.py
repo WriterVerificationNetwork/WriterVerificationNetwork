@@ -97,23 +97,23 @@ class TMDataset(Dataset):
                 anchor_letter = os.path.basename(anchor).split("_")[0]
                 img_negative_tms = set(letter_tm_map[anchor_letter].keys()).intersection(negative_tms[anchor_tm])
                 if len(img_negative_tms) > 0:
-                    self.image_list.append(anchor)
+                    if not unfold:
+                        self.image_list.append((positive_tms[anchor_tm], anchor, img_negative_tms))
+                    else:
+                        for neg_tm in img_negative_tms:
+                            for pos_tm in positive_tms[anchor_tm]:
+                                self.image_list.append(([pos_tm], anchor, [neg_tm]))
                     self.anchor_tms.append(anchor_tm)
         self.letter_tm_map = letter_tm_map
-        self.positive_tms = positive_tms
-        self.negative_tms = negative_tms
 
     def __getitem__(self, idx):
         # anchor
-        anchor_img = self.image_list[idx]
+        positive_tms, anchor_img, negative_tms = self.image_list[idx]
         anchor = os.path.basename(anchor_img)
-        anchor_tm = anchor.split("_")[1]
         anchor_letter = anchor.split("_")[0]
 
-        positive_tms = set(self.letter_tm_map[anchor_letter].keys()).intersection(self.positive_tms[anchor_tm])
         positive_tm = random.choice(list(positive_tms))
         positive_img = random.choice(self.letter_tm_map[anchor_letter][positive_tm])
-        negative_tms = set(self.letter_tm_map[anchor_letter].keys()).intersection(self.negative_tms[anchor_tm])
         negative_tm = random.choice(list(negative_tms))
         negative_img = random.choice(self.letter_tm_map[anchor_letter][negative_tm])
 

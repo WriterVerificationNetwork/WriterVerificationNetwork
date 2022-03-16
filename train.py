@@ -60,33 +60,19 @@ class Trainer:
                                                   batch_size=args.batch_size, using_sampler=args.use_sampler)
 
         dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0.8,
-                                split_to=1, unfold=False, min_n_sample_per_letter=args.min_n_sample_per_letter,
+                                split_to=1, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
                                 min_n_sample_per_class=args.min_n_sample_per_class)
         self._model.init_losses('Val', use_weighted_loss=False, dataset=dataset_val)
         self.data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                                 batch_size=args.batch_size)
-
-        dataset_val_unfold = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0.8,
-                                       split_to=1, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
-                                       min_n_sample_per_class=args.min_n_sample_per_class)
-        data_loader_val_unfold = WriterDataLoader(dataset_val_unfold, is_train=False, numb_threads=args.n_threads_train,
-                                                  batch_size=args.batch_size)
 
         self.early_stop = EarlyStop(args.early_stop)
         print("Training tasks {}".format(args.tasks))
         print("Training sets: {} images".format(len(dataset_train)))
         print("Validating sets: {} images".format(len(dataset_val)))
 
-        print("Validating unfold sets: {} images".format(len(dataset_val_unfold)))
         self._train()
         self._model.load()
-
-        val_dict = self._validate(0, data_loader_val_unfold.get_dataloader(), mode='val_unfold')
-
-        for key in val_dict:
-            wandb.run.summary[f'best_model/{key}'] = val_dict[key]
-
-        print("Footprint val unfold: {:.4f}".format(val_dict['val_unfold/acc/footprint']))
 
     def _train(self):
         self._current_step = 0
