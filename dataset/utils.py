@@ -10,11 +10,11 @@ letters = ['α']
 letter_to_idx = {x: i for i, x in enumerate(letters)}
 idx_to_letter = {i: x for i, x in enumerate(letters)}
 
-MAX_WIDTH = 160
-MAX_HEIGHT = 160
+MAX_WIDTH = 28
+MAX_HEIGHT = 28
 
-MAX_BIN_WIDTH = 64
-MAX_BIN_HEIGHT = 64
+MAX_BIN_WIDTH = 28
+MAX_BIN_HEIGHT = 28
 
 
 def rename(newname):

@@ -39,9 +39,9 @@ class TMDataset(Dataset):
             image_by_letter = sorted(image_by_letter)
             letter_tm_map[letter] = {}
             for img in image_by_letter:
-                width, height = imagesize.get(img)
-                if width < 100 and height < 100:
-                    continue
+                # width, height = imagesize.get(img)
+                # if width < 100 and height < 100:
+                #     continue
                 tm = os.path.basename(img).split("_")[1]
                 if tm not in tm_map:
                     tm_map[tm] = []
