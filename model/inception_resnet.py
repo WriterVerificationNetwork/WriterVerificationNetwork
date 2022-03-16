@@ -1,6 +1,7 @@
 import torch
 from facenet_pytorch.models.inception_resnet_v1 import InceptionResnetV1
 from torch import nn
+import torch.nn.functional as F
 
 
 class WriterVerificationNetwork(InceptionResnetV1):
@@ -36,30 +37,26 @@ class WriterVerificationNetwork(InceptionResnetV1):
         self.final_reconstruct = nn.Conv2d(in_channels=16, out_channels=1, kernel_size=(1, 1))
 
         self.symbol_embedding = nn.Sequential(
-            nn.Linear(1792, 512),
+            nn.Linear(1792, 512, bias=False),
             nn.BatchNorm1d(512),
             nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.BatchNorm1d(256)
+            nn.Linear(512, 256)
         )
 
         self.symbol_embedding_projection = nn.Sequential(
-            nn.Linear(256, 128, bias=False),
-            nn.BatchNorm1d(128)
+            nn.Linear(256, 128)
         )
 
         self.final_symbol = nn.Linear(256, numb_symbols)
 
         self.writer_footprint = nn.Sequential(
-            nn.Linear(1792, 1024),
-            nn.BatchNorm1d(1024),
+            nn.Linear(1792, 512, bias=False),
+            nn.BatchNorm1d(512),
             nn.ReLU(),
             nn.Dropout(p=dropout),
-            nn.Linear(1024, 512, bias=False),
-            nn.BatchNorm1d(512)
+            nn.Linear(512, 256)
         )
-        self.symbol_footprint_projection = nn.Linear(640, 512)
-        self.writer_footprint_bn = nn.BatchNorm1d(512)
+        self.symbol_footprint_projection = nn.Linear(640, 256)
         self.to(device)
 
         self._tasks = tasks
@@ -111,8 +108,7 @@ class WriterVerificationNetwork(InceptionResnetV1):
                 footprint = torch.cat([footprint, symbol_embedding_proj], dim=1)
                 footprint = self.dropout(footprint)
                 footprint = self.symbol_footprint_projection(footprint)
-            footprint = self.writer_footprint_bn(footprint)
-            results['footprint'] = footprint
+            results['footprint'] = F.normalize(footprint, p=2)
 
         return results
 
