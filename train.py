@@ -73,6 +73,8 @@ class Trainer:
 
         self._train()
         self._model.load()
+        self._visualize(0, 1, "all_data")
+        self._visualize(0.8, 1, "val_set")
 
     def _train(self):
         self._current_step = 0
@@ -99,8 +101,6 @@ class Trainer:
                 for key in val_dict:
                     wandb.run.summary[f'best_model/{key}'] = val_dict[key]
                 self._model.save()  # save best model
-                self._visualize(0, 1, "all_data")
-                self._visualize(0.8, 1, "val_set")
 
             # print epoch info
             time_epoch = time.time() - epoch_start_time
