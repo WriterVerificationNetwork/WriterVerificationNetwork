@@ -61,6 +61,7 @@ class ResNet18(nn.Module):
             nn.Linear(256, 128, bias=False),
             nn.BatchNorm1d(128),
             nn.ReLU(),
+            nn.Dropout(dropout),
             nn.Linear(128, 64)
         )
         self.dropout = nn.Dropout(dropout)
