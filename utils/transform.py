@@ -6,6 +6,7 @@ from PIL import ImageOps
 from PIL.Image import Image
 from imgaug import augmenters as iaa
 from torch import nn
+from torchvision.transforms import transforms
 
 normal = torch.distributions.Normal(0, 0.15)
 
@@ -34,6 +35,7 @@ def get_transforms(args):
             torchvision.transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3),
         ], p=applying_percent),
         torchvision.transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         #
         # torchvision.transforms.RandomApply([
         #     lambda x: addNoise(x, x.device)
@@ -43,7 +45,8 @@ def get_transforms(args):
 
 def val_transforms(args):
     return torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor()
+        torchvision.transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
 
