@@ -16,7 +16,7 @@ untensor = torchvision.transforms.ToPILImage()
 
 dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0, split_to=1,
                           min_n_sample_per_letter=args.min_n_sample_per_letter,
-                          min_n_sample_per_class=args.min_n_sample_per_class)
+                          min_n_sample_per_class=args.min_n_sample_per_class, training_mode=True)
 
 fig = plt.figure()
 viewer = fig.add_subplot(111)

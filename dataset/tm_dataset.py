@@ -15,13 +15,15 @@ from dataset.utils import resize_image, letters, MAX_WIDTH, MAX_HEIGHT, letter_t
 class TMDataset(Dataset):
 
     def __init__(self, gt_dir, gt_binarized_dir, filter_file, transforms, split_from, split_to,
-                 unfold=False, min_n_sample_per_letter=0, min_n_sample_per_class=0, without_imgs=False):
+                 unfold=False, min_n_sample_per_letter=0, min_n_sample_per_class=0,
+                 without_imgs=False, training_mode=False):
         # Init folder dir
         self.gt_dir = gt_dir
         self.gt_binarized_dir = gt_binarized_dir
         self.transforms = transforms
         self.without_imgs = without_imgs
         self.anchor_tms = []
+        self.training_mode = training_mode
 
         # Create image item
         temp_image_list = []
@@ -129,39 +131,43 @@ class TMDataset(Dataset):
         should_mirror = bool(random.choice([0, 1]))
         img_anchor = get_image(os.path.join(self.gt_dir, anchor), self.transforms, is_bin_img=False,
                                mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        # bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
-        #                        mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
+                               mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
         # positive image
         moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(positive_img)
-        should_flip = bool(random.choice([0, 1]))
-        should_mirror = bool(random.choice([0, 1]))
         img_positive = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        # bin_positive = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
-        #                          mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_positive = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
+                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
+
+        should_replace = bool(random.choice([0, 1]))
+        if self.training_mode and should_replace:
+            img_positive = bin_positive
 
         # negative image
         moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(negative_img)
-        should_flip = bool(random.choice([0, 1]))
-        should_mirror = bool(random.choice([0, 1]))
         img_negative = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        # bin_negative = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
-        #                          mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_negative = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
+                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
+
+        should_replace = bool(random.choice([0, 1]))
+        if self.training_mode and should_replace:
+            img_negative = bin_negative
 
         return {
             'symbol': letter_to_idx[anchor.split("_")[0]],
             'img_anchor': img_anchor,
             'anchor_path': anchor,
             'tm_anchor': anchor_tm,
-            'bin_anchor': img_anchor,
+            'bin_anchor': bin_anchor,
             'img_positive': img_positive,
-            'bin_positive': img_positive,
+            'bin_positive': bin_positive,
             'img_negative': img_negative,
-            'bin_negative': img_negative
+            'bin_negative': bin_negative
         }
 
     def __len__(self) -> int:
@@ -188,8 +194,8 @@ def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, 
             padding_image = ImageOps.flip(padding_image)
         if mirror:
             padding_image = ImageOps.mirror(padding_image)
-        if is_bin_img:
-            padding_image = padding_image.convert("L")
+        # if is_bin_img:
+        #     padding_image = padding_image.convert("L")
 
     # Transform image
     if not is_bin_img:
