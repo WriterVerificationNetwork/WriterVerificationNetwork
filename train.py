@@ -50,7 +50,7 @@ class Trainer:
         wandb.run.save()
         wandb.config.update(args)
         device = torch.device('cuda' if args.cuda else 'cpu')
-        self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=0.5)
+        self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=args.dropout)
         transforms = get_transforms(args)
         dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
                                   split_from=0, split_to=0.8, min_n_sample_per_letter=args.min_n_sample_per_letter,
@@ -128,9 +128,7 @@ class Trainer:
         neg_out, neg_losses = self._model.compute_loss(input_data)
         footprint_loss = self._model.compute_footprint(anchor_out['footprint'], pos_out['footprint'],
                                                        neg_out['footprint'])
-        final_losses = {}
-        for task in anchor_losses:
-            final_losses[task] = (anchor_losses[task] + pos_losses[task] + neg_losses[task]) / 3.
+        final_losses = anchor_losses
         final_losses['footprint'] = footprint_loss
 
         if log_data:
