@@ -22,7 +22,7 @@ class ResNet18(nn.Module):
         returned_layers = [1, 2, 3]
         return_layers = {f'layer{k}': str(v) for v, k in enumerate(returned_layers)}
         self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
-        self.pooling_layer = nn.AdaptiveAvgPool2d(1)
+        self.pooling_layer = nn.AdaptiveMaxPool2d(1)
         self.up_scaling_1 = nn.Sequential(
             nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=(2, 2), stride=2),
             nn.BatchNorm2d(64),
@@ -61,7 +61,6 @@ class ResNet18(nn.Module):
             nn.Linear(256, 128, bias=False),
             nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.Dropout(p=dropout),
             nn.Linear(128, 64)
         )
         self.dropout = nn.Dropout(dropout)
@@ -103,7 +102,7 @@ class ResNet18(nn.Module):
                 footprint = torch.cat([footprint, symbol_embedding_proj], dim=1)
                 footprint = self.dropout(footprint)
                 footprint = self.symbol_footprint_projection(footprint)
-            results['footprint'] = F.normalize(footprint, p=2)
+            results['footprint'] = footprint
 
         return results
 
