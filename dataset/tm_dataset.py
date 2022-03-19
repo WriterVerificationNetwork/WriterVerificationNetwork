@@ -198,9 +198,10 @@ def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, 
         #     padding_image = padding_image.convert("L")
 
     # Transform image
-    if not is_bin_img:
-        img_tensor = data_transform(padding_image)
-    else:
-        img_tensor = torchvision.transforms.ToTensor()(padding_image)
+    # if not is_bin_img:
+    #     img_tensor = data_transform(padding_image)
+    # else:
+    #     img_tensor = torchvision.transforms.ToTensor()(padding_image)
+    img_tensor = data_transform(padding_image)
 
     return img_tensor
