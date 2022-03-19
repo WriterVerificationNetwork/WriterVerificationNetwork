@@ -1,9 +1,22 @@
 import numpy as np
+import torch
 import torchvision.transforms
 import torchvision.transforms
 from PIL import ImageOps
 from PIL.Image import Image
 from imgaug import augmenters as iaa
+from torch import nn
+
+normal = torch.distributions.Normal(0, 0.15)
+
+
+def addNoise(x, device='cpu'):
+    """
+    We will use this helper function to add noise to some data.
+    x: the data we want to add noise to
+    device: the CPU or GPU that the input is located on.
+    """
+    return x + normal.sample(sample_shape=torch.Size(x.shape)).to(device)
 
 
 def get_transforms(args):
@@ -19,9 +32,12 @@ def get_transforms(args):
         torchvision.transforms.ToPILImage(),
         torchvision.transforms.RandomApply([
             torchvision.transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3),
-        ], p=applying_percent
-        ),
-        torchvision.transforms.ToTensor()
+        ], p=applying_percent),
+        torchvision.transforms.ToTensor(),
+
+        torchvision.transforms.RandomApply([
+            lambda x: addNoise(x, x.device)
+        ], p=0.6)
     ])
 
 

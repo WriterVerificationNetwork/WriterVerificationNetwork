@@ -42,7 +42,7 @@ class ResNet18(nn.Module):
             nn.Dropout2d(p=dropout)
         )
 
-        self.final_reconstruct = nn.Conv2d(in_channels=16, out_channels=1, kernel_size=(1, 1))
+        self.final_reconstruct = nn.Conv2d(in_channels=16, out_channels=3, kernel_size=(1, 1))
 
         self.symbol_embedding = nn.Sequential(
             nn.Linear(256, 128, bias=False),

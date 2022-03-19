@@ -31,8 +31,8 @@ def binarize_image_Otsu_denoise(image_path):
     mask = cv2.inRange(image_array, lower, upper)
     masked_image = np.copy(image_array)
     masked_image[mask != 0] = dominant_color
-    masked_image = Image.fromarray(masked_image)
-    masked_image.save("convert.png")
+    # masked_image = Image.fromarray(masked_image)
+    # masked_image.save("convert.png")
     # Binarize image
     image = np.asarray(Image.open("convert.png").convert('L'))
     t_otsu = threshold_otsu(image)

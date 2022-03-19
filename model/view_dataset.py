@@ -1,6 +1,9 @@
+import matplotlib
 import numpy as np
+import torch
 import torchvision
 from matplotlib import pyplot as plt
+matplotlib.use('MACOSX')
 
 from dataset.tm_dataset import TMDataset
 from options.train_options import TrainOptions
@@ -23,8 +26,19 @@ fig.show() # Initially shows the figure
 for idx, item in enumerate(dataset_train):
     # a = 1
     viewer.clear()
-    img = np.asarray(untensor(item['img_anchor']))
-    viewer.imshow(img)
+    img = item['img_anchor']
+    img_bin = item['bin_anchor']
+    img_pos = item['img_positive']
+    img_pos_bin = item['bin_positive']
+    img_neg = item['img_negative']
+    img_neg_bin = item['bin_negative']
 
-    plt.pause(0.05)
+    img = torch.cat([img, img_bin], dim=1)
+    img_neg = torch.cat([img_neg, img_neg_bin], dim=1)
+    img_pos = torch.cat([img_pos, img_pos_bin], dim=1)
+
+    out_img = torch.cat([img, img_pos, img_neg], dim=2)
+    viewer.imshow(np.asarray(untensor(out_img)))
+
+    plt.pause(2)
     fig.canvas.draw()

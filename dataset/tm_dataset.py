@@ -129,8 +129,8 @@ class TMDataset(Dataset):
         should_mirror = bool(random.choice([0, 1]))
         img_anchor = get_image(os.path.join(self.gt_dir, anchor), self.transforms, is_bin_img=False,
                                mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
-                               mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        # bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
+        #                        mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
         # positive image
         moving_percent = random.randint(0, 10) / 10.
@@ -139,8 +139,8 @@ class TMDataset(Dataset):
         should_mirror = bool(random.choice([0, 1]))
         img_positive = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        bin_positive = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
-                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        # bin_positive = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
+        #                          mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
         # negative image
         moving_percent = random.randint(0, 10) / 10.
@@ -149,19 +149,19 @@ class TMDataset(Dataset):
         should_mirror = bool(random.choice([0, 1]))
         img_negative = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        bin_negative = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
-                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        # bin_negative = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
+        #                          mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
         return {
             'symbol': letter_to_idx[anchor.split("_")[0]],
             'img_anchor': img_anchor,
             'anchor_path': anchor,
             'tm_anchor': anchor_tm,
-            'bin_anchor': bin_anchor,
+            'bin_anchor': img_anchor,
             'img_positive': img_positive,
-            'bin_positive': bin_positive,
+            'bin_positive': img_positive,
             'img_negative': img_negative,
-            'bin_negative': bin_negative
+            'bin_negative': img_negative
         }
 
     def __len__(self) -> int:
@@ -177,7 +177,7 @@ def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, 
         scale = min(ratio_h, ratio_w)
         image = resize_image(img, scale).convert('RGB')
         width, height = image.size
-        if is_bin_img:
+        if not is_bin_img:
             image = ImageOps.invert(image)
         # Find the dominant color
         # dominant_color = bincount_app(np.asarray(img.convert("RGB")))
