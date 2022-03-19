@@ -10,11 +10,11 @@ letters = ['α']
 letter_to_idx = {x: i for i, x in enumerate(letters)}
 idx_to_letter = {i: x for i, x in enumerate(letters)}
 
-MAX_WIDTH = 28
-MAX_HEIGHT = 28
+MAX_WIDTH = 64
+MAX_HEIGHT = 64
 
-MAX_BIN_WIDTH = 28
-MAX_BIN_HEIGHT = 28
+MAX_BIN_WIDTH = 64
+MAX_BIN_HEIGHT = 64
 
 
 def rename(newname):
@@ -38,7 +38,7 @@ def resize_image(image: Image.Image, scale_factor: int) -> Image.Image:
     if scale_factor == 1:
         return image
     return image.resize((round(image.width * scale_factor), round(image.height * scale_factor)),
-                        resample=Image.BILINEAR)
+                        resample=Image.BICUBIC)
 
 
 def group_by(iter_data, key_fn):

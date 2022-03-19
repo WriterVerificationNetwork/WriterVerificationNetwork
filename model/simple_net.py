@@ -41,7 +41,7 @@ class SimpleNetwork(nn.Module):
         )
 
         self.footprint = nn.Sequential(
-            nn.Conv2d(64, 128, (3, 3), stride=(2, 2)),    # 32 * 7 * 7 to 64 * 3 * 3
+            nn.Conv2d(64, 128, (3, 3), stride=(2, 2), bias=False),    # 32 * 7 * 7 to 64 * 3 * 3
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.Conv2d(128, 128, (1, 1), stride=(1, 1)),

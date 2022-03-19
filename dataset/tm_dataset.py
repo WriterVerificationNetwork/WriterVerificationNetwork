@@ -2,16 +2,14 @@ import glob
 import json
 import os
 import random
-from datetime import datetime
-from pathlib import Path
+
 import imagesize
-import openpyxl
 import torchvision
 from PIL import Image, ImageOps
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from dataset.utils import resize_image, letters, MAX_WIDTH, MAX_HEIGHT, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, letter_to_idx
+from dataset.utils import resize_image, letters, MAX_WIDTH, MAX_HEIGHT, letter_to_idx
 
 
 class TMDataset(Dataset):
@@ -39,9 +37,9 @@ class TMDataset(Dataset):
             image_by_letter = sorted(image_by_letter)
             letter_tm_map[letter] = {}
             for img in image_by_letter:
-                # width, height = imagesize.get(img)
-                # if width < 100 and height < 100:
-                #     continue
+                width, height = imagesize.get(img)
+                if width < 40 and height < 40:
+                    continue
                 tm = os.path.basename(img).split("_")[1]
                 if tm not in tm_map:
                     tm_map[tm] = []
@@ -127,26 +125,32 @@ class TMDataset(Dataset):
                 'anchor_path': anchor,
                 'tm_anchor': anchor_tm
             }
-        img_anchor = get_image(os.path.join(self.gt_dir, anchor),
-                               self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
-        bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor),
-                               self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True, mov=moving_percent)
+        should_flip = bool(random.choice([0, 1]))
+        should_mirror = bool(random.choice([0, 1]))
+        img_anchor = get_image(os.path.join(self.gt_dir, anchor), self.transforms, is_bin_img=False,
+                               mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
+                               mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
         # positive image
         moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(positive_img)
-        img_positive = get_image(os.path.join(self.gt_dir, img),
-                                 self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
-        bin_positive = get_image(os.path.join(self.gt_binarized_dir, img),
-                                 self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True, mov=moving_percent)
+        should_flip = bool(random.choice([0, 1]))
+        should_mirror = bool(random.choice([0, 1]))
+        img_positive = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
+                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_positive = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
+                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
         # negative image
         moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(negative_img)
-        img_negative = get_image(os.path.join(self.gt_dir, img),
-                                 self.transforms, MAX_WIDTH, MAX_HEIGHT, is_bin_img=False, mov=moving_percent)
-        bin_negative = get_image(os.path.join(self.gt_binarized_dir, img),
-                                 self.transforms, MAX_BIN_WIDTH, MAX_BIN_HEIGHT, is_bin_img=True, mov=moving_percent)
+        should_flip = bool(random.choice([0, 1]))
+        should_mirror = bool(random.choice([0, 1]))
+        img_negative = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
+                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_negative = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
+                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
         return {
             'symbol': letter_to_idx[anchor.split("_")[0]],
@@ -164,24 +168,26 @@ class TMDataset(Dataset):
         return len(self.image_list)
 
 
-def get_image(image_path, data_transform, max_w, max_h, is_bin_img=False, mov=0.):
+def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, mirror=False):
     with Image.open(image_path) as img:
         # Resize image to make sure image size is smaller than page size
         width, height = img.size
-        ratio_w = max_w / width
-        ratio_h = max_h / height
+        ratio_w = MAX_WIDTH / width
+        ratio_h = MAX_HEIGHT / height
         scale = min(ratio_h, ratio_w)
         image = resize_image(img, scale).convert('RGB')
         width, height = image.size
-        if not is_bin_img:
+        if is_bin_img:
             image = ImageOps.invert(image)
         # Find the dominant color
         # dominant_color = bincount_app(np.asarray(img.convert("RGB")))
         # Add image to the background
-        padding_image = Image.new(mode="RGB", size=(max_w, max_h), color=(0, 0, 0))
-        padding_image.paste(image, box=(int(mov * (max_w - width)), int(mov * (max_h - height))))
-        # padding_image.save(name + ".png")
-
+        padding_image = Image.new(mode="RGB", size=(MAX_WIDTH, MAX_HEIGHT), color=(0, 0, 0))
+        padding_image.paste(image, box=(int(mov * (MAX_WIDTH - width)), int(mov * (MAX_HEIGHT - height))))
+        if flip:
+            padding_image = ImageOps.flip(padding_image)
+        if mirror:
+            padding_image = ImageOps.mirror(padding_image)
         if is_bin_img:
             padding_image = padding_image.convert("L")
 
@@ -192,37 +198,3 @@ def get_image(image_path, data_transform, max_w, max_h, is_bin_img=False, mov=0.
         img_tensor = torchvision.transforms.ToTensor()(padding_image)
 
     return img_tensor
-
-
-def create_negative_tm_pair(filter_file, tms_ignoring):
-    filter_tm_file = Path(filter_file)
-    filter_tm_object = openpyxl.load_workbook(filter_tm_file)
-    sheet = filter_tm_object.active
-    negative_tm_list = []
-    for i, row in enumerate(sheet.iter_rows(min_row=2, max_row=82, min_col=2, max_col=82, values_only=True)):
-        for j, cell in enumerate(row):
-            if cell == "X" and (str(2 + i) not in tms_ignoring) and (str(2 + j) not in tms_ignoring):
-                negative_tm_list.append([str(sheet.cell(row=2 + i, column=1).value),
-                                         str(sheet.cell(row=1, column=2 + j).value)])
-                negative_tm_list.append([str(sheet.cell(row=1, column=2 + j).value),
-                                         str(sheet.cell(row=2 + i, column=1).value)])
-    return negative_tm_list
-
-
-if __name__ == "__main__":
-    ORIGINAL_FOLDER_DIR = "/home/mvu/Downloads/bt1_by_letters_20210824"
-    GROUND_TRUTH_FOLDER_DIR = "/home/mvu/Downloads/bt1_by_letters_binarization"
-
-    GOOD_GT_DATA_DIRNAME = GROUND_TRUTH_FOLDER_DIR + "/good"
-
-    FILTER_TM_IMAGE_FILE_PATH = "/home/mvu/Downloads/Filter-Iliad-images.xlsx"
-    start_time = datetime.now()
-    dataset = TMDataset(ORIGINAL_FOLDER_DIR,
-                           GOOD_GT_DATA_DIRNAME,
-                           FILTER_TM_IMAGE_FILE_PATH,
-                           torchvision.transforms.Compose([torchvision.transforms.ToTensor()]),
-                           split_from=0, split_to=0.8)
-    print(len(dataset.image_list))
-    end_time = datetime.now()
-    print(end_time - start_time)
-    print(dataset[0])
