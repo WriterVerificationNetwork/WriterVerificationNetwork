@@ -142,7 +142,7 @@ class TMDataset(Dataset):
         bin_positive = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
-        should_replace = bool(random.choice([0, 0, 1, 1, 1]))
+        should_replace = bool(random.choice([0, 0, 0, 1, 1]))
         if self.training_mode and should_replace:
             img_positive = bin_positive
 
@@ -154,7 +154,7 @@ class TMDataset(Dataset):
         bin_negative = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
-        should_replace = bool(random.choice([0, 0, 1, 1, 1]))
+        should_replace = bool(random.choice([0, 0, 0, 1, 1]))
         if self.training_mode and should_replace:
             img_negative = bin_negative
 
