@@ -4,6 +4,7 @@ import os
 import random
 
 import imagesize
+import numpy as np
 import torchvision
 from PIL import Image, ImageOps
 from torch.utils.data import Dataset
@@ -129,32 +130,32 @@ class TMDataset(Dataset):
             }
         should_flip = bool(random.choice([0, 1]))
         should_mirror = bool(random.choice([0, 1]))
-        img_anchor = get_image(os.path.join(self.gt_dir, anchor), self.transforms, is_bin_img=False,
+        img_anchor, origin_anc = get_image(os.path.join(self.gt_dir, anchor), self.transforms, is_bin_img=False,
                                mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
-                               mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_anchor, _ = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
+                               mov=moving_percent, flip=should_flip, mirror=should_mirror, original_image=origin_anc)
 
         # positive image
         moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(positive_img)
-        img_positive = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
+        img_positive, origin_pos = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        bin_positive = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
-                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_positive, _ = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
+                                 mov=moving_percent, flip=should_flip, mirror=should_mirror, original_image=origin_pos)
 
-        should_replace = bool(random.choice([0, 0, 0, 1, 1]))
+        should_replace = bool(random.choice([0, 1]))
         if self.training_mode and should_replace:
             img_positive = bin_positive
 
         # negative image
         moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(negative_img)
-        img_negative = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
+        img_negative, origin_neg = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        bin_negative = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
-                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_negative, _ = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
+                                 mov=moving_percent, flip=should_flip, mirror=should_mirror, original_image=origin_neg)
 
-        should_replace = bool(random.choice([0, 0, 0, 1, 1]))
+        should_replace = bool(random.choice([0, 1]))
         if self.training_mode and should_replace:
             img_negative = bin_negative
 
@@ -174,7 +175,8 @@ class TMDataset(Dataset):
         return len(self.image_list)
 
 
-def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, mirror=False):
+def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False,
+              mirror=False, original_image=None):
     with Image.open(image_path) as img:
         # Resize image to make sure image size is smaller than page size
         width, height = img.size
@@ -196,6 +198,9 @@ def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, 
             padding_image = ImageOps.mirror(padding_image)
         # if is_bin_img:
         #     padding_image = padding_image.convert("L")
+        if original_image is not None:
+            padding_image = np.asarray(padding_image) * np.asarray(original_image)
+            padding_image = Image.fromarray(padding_image)
 
     # Transform image
     # if not is_bin_img:
@@ -204,4 +209,4 @@ def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, 
     #     img_tensor = torchvision.transforms.ToTensor()(padding_image)
     img_tensor = data_transform(padding_image)
 
-    return img_tensor
+    return img_tensor, padding_image
