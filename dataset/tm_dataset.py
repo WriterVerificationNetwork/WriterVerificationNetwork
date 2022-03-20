@@ -4,6 +4,7 @@ import os
 import random
 
 import imagesize
+import numpy as np
 import torchvision
 from PIL import Image, ImageOps
 from torch.utils.data import Dataset
@@ -78,8 +79,8 @@ class TMDataset(Dataset):
                     negative_tms[current_tm] += [second_tm]
                     negative_tms[second_tm] += [current_tm]
                 if relationship == 1:
-                    positive_tms[current_tm] += [second_tm]
-                    positive_tms[second_tm] += [current_tm]
+                    positive_tms[current_tm] += [second_tm] * 2
+                    positive_tms[second_tm] += [current_tm] * 2
 
         # same_categories = ['60764', '60891', '60842', '60934']
         # for tm in same_categories:
@@ -101,7 +102,7 @@ class TMDataset(Dataset):
                         self.image_list.append((positive_tms[anchor_tm], anchor, img_negative_tms))
                     else:
                         for neg_tm in img_negative_tms:
-                            for pos_tm in positive_tms[anchor_tm]:
+                            for pos_tm in set(positive_tms[anchor_tm]):
                                 self.image_list.append(([pos_tm], anchor, [neg_tm]))
                     self.anchor_tms.append(anchor_tm)
         self.letter_tm_map = letter_tm_map
@@ -127,8 +128,9 @@ class TMDataset(Dataset):
                 'anchor_path': anchor,
                 'tm_anchor': anchor_tm
             }
-        should_flip = bool(random.choice([0, 1]))
-        should_mirror = bool(random.choice([0, 1]))
+
+        should_flip = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
+        should_mirror = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
         img_anchor = get_image(os.path.join(self.gt_dir, anchor), self.transforms, is_bin_img=False,
                                mov=moving_percent, flip=should_flip, mirror=should_mirror)
         bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
@@ -142,7 +144,7 @@ class TMDataset(Dataset):
         bin_positive = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
-        should_replace = bool(random.choice([0, 1]))
+        should_replace = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
         if self.training_mode and should_replace:
             img_positive = bin_positive
 
@@ -154,7 +156,7 @@ class TMDataset(Dataset):
         bin_negative = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
 
-        should_replace = bool(random.choice([0, 1]))
+        should_replace = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
         if self.training_mode and should_replace:
             img_negative = bin_negative
 
