@@ -41,7 +41,7 @@ class TMDataset(Dataset):
             letter_tm_map[letter] = {}
             for img in image_by_letter:
                 width, height = imagesize.get(img)
-                if width < 40 and height < 40:
+                if width < 32 and height < 32:
                     continue
                 tm = os.path.basename(img).split("_")[1]
                 if tm not in tm_map:
@@ -100,11 +100,12 @@ class TMDataset(Dataset):
                 if len(img_negative_tms) > 0:
                     if not unfold:
                         self.image_list.append((positive_tms[anchor_tm], anchor, img_negative_tms))
+                        self.anchor_tms.append(anchor_tm)
                     else:
                         for neg_tm in img_negative_tms:
                             for pos_tm in set(positive_tms[anchor_tm]):
                                 self.image_list.append(([pos_tm], anchor, [neg_tm]))
-                    self.anchor_tms.append(anchor_tm)
+                                self.anchor_tms.append(anchor_tm)
         self.letter_tm_map = letter_tm_map
 
     def __getitem__(self, idx):
