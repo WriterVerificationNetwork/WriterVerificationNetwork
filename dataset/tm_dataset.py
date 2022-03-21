@@ -121,6 +121,9 @@ class TMDataset(Dataset):
 
         # anchor image
         moving_percent = random.randint(0, 10) / 10.
+        if self.training_mode:
+            moving_percent = 0.5
+
         anchor = os.path.basename(anchor_img)
         anchor_tm = anchor.split("_")[1]
         if self.without_imgs:
@@ -132,6 +135,10 @@ class TMDataset(Dataset):
 
         should_flip = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
         should_mirror = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
+        if self.training_mode:
+            should_flip = False
+            should_mirror = False
+
         img_anchor, origin_anc = get_image(os.path.join(self.gt_dir, anchor), self.transforms, is_bin_img=False,
                                mov=moving_percent, flip=should_flip, mirror=should_mirror)
         bin_anchor, _ = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
@@ -139,6 +146,10 @@ class TMDataset(Dataset):
 
         # positive image
         moving_percent = random.randint(0, 10) / 10.
+
+        if self.training_mode:
+            moving_percent = 0.5
+
         img = os.path.basename(positive_img)
         img_positive, origin_pos = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
@@ -151,6 +162,9 @@ class TMDataset(Dataset):
 
         # negative image
         moving_percent = random.randint(0, 10) / 10.
+        if self.training_mode:
+            moving_percent = 0.5
+
         img = os.path.basename(negative_img)
         img_negative, origin_neg = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
