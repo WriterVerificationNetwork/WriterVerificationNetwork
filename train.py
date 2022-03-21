@@ -219,10 +219,13 @@ class Trainer:
     def compute_tms_distances(self, embeddings, n_testing_items=10):
         all_tms = list(embeddings.keys())
         distance_func = torch.nn.MSELoss()
-        results = []
+        results = {}
         for i in range(len(all_tms)):
             source_tm = all_tms[i]
-            for j in range(i + 1, len(all_tms)):
+            results[source_tm] = []
+            for j in range(i, len(all_tms)):
+                if i == j:
+                    continue
                 target_tm = all_tms[j]
                 distances = []
                 for _ in range(10 * n_testing_items):
@@ -231,7 +234,10 @@ class Trainer:
                     distances.append(distance_func(source_features, target_features))
 
                 avg_distance = sum(distances) / len(distances)
-                results.append({'source': source_tm, 'target': target_tm, 'distance': avg_distance.item()})
+                results[source_tm].append({'source': source_tm, 'target': target_tm, 'distance': avg_distance.item()})
+            results[source_tm] = sorted(results[source_tm], key=lambda x: x['distance'])
+            results[source_tm] = results[source_tm][0]
+        results = sorted(list(results.values()), key=lambda x: x['distance'])
         return results
 
     def _visualize(self, split_from, split_to, viz_name):

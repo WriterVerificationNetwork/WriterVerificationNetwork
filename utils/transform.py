@@ -60,7 +60,8 @@ class UnNormalize(torchvision.transforms.Normalize):
 def reverse_transform():
     return torchvision.transforms.Compose([
         UnNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        torchvision.transforms.ToPILImage()
+        torchvision.transforms.ToPILImage(),
+        lambda image: ImageOps.invert(image)
     ])
 
 
