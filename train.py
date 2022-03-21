@@ -72,7 +72,8 @@ class Trainer:
         print("Training sets: {} images".format(len(dataset_train)))
         print("Validating sets: {} images".format(len(dataset_val)))
 
-        self._train()
+        if not self._model.existing():
+            self._train()
         self._model.load()
         self._visualize(0, 1, "all_data")
         self._visualize(0.8, 1, "val_set")
@@ -223,7 +224,7 @@ class Trainer:
         for i in range(len(all_tms)):
             source_tm = all_tms[i]
             results[source_tm] = []
-            for j in range(i, len(all_tms)):
+            for j in range(len(all_tms)):
                 if i == j:
                     continue
                 target_tm = all_tms[j]

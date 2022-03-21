@@ -44,6 +44,9 @@ class ModelWrapper:
         self._load_network(self._model, self.name)
         self._load_optimizer(self._optimizer, self.name)
 
+    def existing(self):
+        return self._check_model(self.name)
+
     def get_current_lr(self):
         lr = []
         for param_group in self._optimizer.param_groups:
@@ -83,6 +86,11 @@ class ModelWrapper:
         checkpoint = torch.load(pretrained_checkpoint, map_location=map_location(self._args.cuda))
         self._model.load_state_dict(checkpoint)
         print('loaded net: %s' % pretrained_checkpoint)
+
+    def _check_model(self, network_label):
+        load_filename = 'net_%s.pth' % network_label
+        load_path = os.path.join(self._save_dir, load_filename)
+        return os.path.exists(load_path)
 
     def _load_network(self, network, network_label):
         load_filename = 'net_%s.pth' % network_label
