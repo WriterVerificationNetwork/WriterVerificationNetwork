@@ -3,16 +3,17 @@ import numpy as np
 import torch
 import torchvision
 from matplotlib import pyplot as plt
-matplotlib.use('MACOSX')
+# matplotlib.use('MACOSX')
+matplotlib.use('TkAgg')
 
 from dataset.tm_dataset import TMDataset
 from options.train_options import TrainOptions
-from utils.transform import get_transforms
+from utils.transform import get_transforms, reverse_transform
 
 args = TrainOptions().parse()
 
 transforms = get_transforms(args)
-untensor = torchvision.transforms.ToPILImage()
+untensor = reverse_transform()
 
 dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0, split_to=1,
                           min_n_sample_per_letter=args.min_n_sample_per_letter,
