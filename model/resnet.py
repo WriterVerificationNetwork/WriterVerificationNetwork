@@ -45,7 +45,7 @@ class ResNet18(nn.Module):
         self.final_reconstruct = nn.Conv2d(in_channels=16, out_channels=3, kernel_size=(1, 1))
 
         self.symbol_embedding = nn.Sequential(
-            nn.Linear(256, 128, bias=False),
+            nn.Linear(4096, 128, bias=False),
             nn.BatchNorm1d(128),
             nn.ReLU(),
             nn.Linear(128, 64)
@@ -58,14 +58,14 @@ class ResNet18(nn.Module):
         self.final_symbol = nn.Linear(64, numb_symbols)
 
         self.writer_footprint = nn.Sequential(
-            nn.Linear(256, 128, bias=False),
-            nn.BatchNorm1d(128),
+            nn.Linear(4096, 1024, bias=False),
+            nn.BatchNorm1d(1024),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(128, 64)
+            nn.Linear(1024, 128)
         )
         self.dropout = nn.Dropout(dropout)
-        self.symbol_footprint_projection = nn.Linear(80, 64)
+        self.symbol_footprint_projection = nn.Linear(144, 128)
         self.to(device)
 
         self._tasks = tasks
@@ -83,7 +83,7 @@ class ResNet18(nn.Module):
             results['reconstruct'] = reconstructing
 
         # Dimension reduction
-        x = self.pooling_layer(x['2'])
+        x = x['2']
         x = x.view(x.shape[0], -1)
 
         # Symbol recognizing

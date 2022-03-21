@@ -79,8 +79,8 @@ class TMDataset(Dataset):
                     negative_tms[current_tm] += [second_tm]
                     negative_tms[second_tm] += [current_tm]
                 if relationship == 1:
-                    positive_tms[current_tm] += [second_tm] * 2
-                    positive_tms[second_tm] += [current_tm] * 2
+                    positive_tms[current_tm] += [second_tm]
+                    positive_tms[second_tm] += [current_tm]
 
         # same_categories = ['60764', '60891', '60842', '60934']
         # for tm in same_categories:
