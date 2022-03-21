@@ -19,7 +19,7 @@ class ResNet18(nn.Module):
         super().__init__()
 
         backbone = resnet.__dict__['resnet18'](pretrained=True, norm_layer=FrozenBatchNorm2d)
-        returned_layers = [1, 2, 3]
+        returned_layers = [1, 2]
         return_layers = {f'layer{k}': str(v) for v, k in enumerate(returned_layers)}
         self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
         self.pooling_layer = nn.MaxPool2d(2, 2)
