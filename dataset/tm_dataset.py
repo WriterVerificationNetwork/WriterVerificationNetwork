@@ -121,7 +121,7 @@ class TMDataset(Dataset):
 
         # anchor image
         moving_percent = random.randint(0, 10) / 10.
-        if self.training_mode:
+        if not self.training_mode:
             moving_percent = 0.5
 
         anchor = os.path.basename(anchor_img)
@@ -135,7 +135,7 @@ class TMDataset(Dataset):
 
         should_flip = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
         should_mirror = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
-        if self.training_mode:
+        if not self.training_mode:
             should_flip = False
             should_mirror = False
 
@@ -147,7 +147,7 @@ class TMDataset(Dataset):
         # positive image
         moving_percent = random.randint(0, 10) / 10.
 
-        if self.training_mode:
+        if not self.training_mode:
             moving_percent = 0.5
 
         img = os.path.basename(positive_img)
@@ -162,7 +162,7 @@ class TMDataset(Dataset):
 
         # negative image
         moving_percent = random.randint(0, 10) / 10.
-        if self.training_mode:
+        if not self.training_mode:
             moving_percent = 0.5
 
         img = os.path.basename(negative_img)
