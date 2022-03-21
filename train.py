@@ -1,3 +1,4 @@
+import copy
 import gc
 import random
 import time
@@ -18,7 +19,7 @@ from model.model_factory import ModelsFactory
 from options.train_options import TrainOptions
 from utils.misc import EarlyStop
 from utils.transform import get_transforms, val_transforms
-from utils.wb_utils import log_prediction
+from utils.wb_utils import log_prediction, wb_img
 
 args = TrainOptions().parse()
 
@@ -224,7 +225,7 @@ class Trainer:
             for j in range(i + 1, len(all_tms)):
                 target_tm = all_tms[j]
                 distances = []
-                for _ in range(3 * n_testing_items):
+                for _ in range(10 * n_testing_items):
                     source_features = torch.stack(random.sample(embeddings[source_tm], n_testing_items))
                     target_features = torch.stack(random.sample(embeddings[target_tm], n_testing_items))
                     distances.append(distance_func(source_features, target_features))
@@ -244,7 +245,9 @@ class Trainer:
                                            batch_size=args.batch_size)
         data_loader = data_loader_val.get_dataloader()
         embeddings = {}
+        sample_imgs = {}
         for train_batch in tqdm(data_loader):
+
             input_data = self.__get_data(train_batch, 'img_anchor', 'bin_anchor', 'symbol')
             anchor_out, _ = self._model.compute_loss(input_data, criterion_mode='Val')
             footprints = anchor_out['footprint'].detach().cpu()
@@ -253,12 +256,18 @@ class Trainer:
                 # if symbol not in embeddings:
                 #     embeddings[symbol] = {}
                 tm_anchor = train_batch['tm_anchor'][i]
+                if tm_anchor not in sample_imgs:
+                    sample_imgs[tm_anchor] = copy.deepcopy(train_batch['img_anchor'][i].cpu())
                 if tm_anchor not in embeddings:
                     embeddings[tm_anchor] = []
                 embeddings[tm_anchor].append(footprints[i])
         distance_data = self.compute_tms_distances(embeddings)
         distance_data = sorted(distance_data, key=lambda x: x['distance'])
-        distance_table = wandb.Table(dataframe=pd.DataFrame(distance_data))
+        distance_table = wandb.Table(columns=['source', 'source_img', 'target', 'target_img', 'distance'])
+        for item in distance_data:
+            distance_table.add_data(item['source'], wb_img(sample_imgs[item['source']]),
+                                    item['target'], wb_img(sample_imgs[item['target']]),
+                                    item['distance'])
         wandb.log({f'distance_{viz_name}': distance_table}, step=self._current_step)
 
         tms = list(embeddings.keys())
