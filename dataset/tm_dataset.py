@@ -11,6 +11,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from dataset.utils import resize_image, letters, MAX_WIDTH, MAX_HEIGHT, letter_to_idx
+from utils import misc
 
 
 class TMDataset(Dataset):
@@ -57,8 +58,8 @@ class TMDataset(Dataset):
         print(f'Total number of images removed by letter lever filter: {total_imgs_removing_by_letter}')
         print(f'Total number of images removed by class lever filter: {total_imgs_removing_by_class}')
 
-        positive_tms = {x: [x] for x in tm_map.keys()}
-        negative_tms = {x: [] for x in tm_map.keys()}
+        positive_tms = {x: {x} for x in tm_map.keys()}
+        negative_tms = {x: set([]) for x in tm_map.keys()}
         with open(filter_file) as f:
             triplet_filter = json.load(f)
 
@@ -76,11 +77,11 @@ class TMDataset(Dataset):
                 if current_tm == '' or second_tm == '':
                     continue
                 if relationship == 4:
-                    negative_tms[current_tm] += [second_tm]
-                    negative_tms[second_tm] += [current_tm]
+                    negative_tms[current_tm].add(second_tm)
+                    negative_tms[second_tm].add(current_tm)
                 if relationship == 1:
-                    positive_tms[current_tm] += [second_tm]
-                    positive_tms[second_tm] += [current_tm]
+                    positive_tms[current_tm].add(second_tm)
+                    positive_tms[second_tm].add(current_tm)
 
         # same_categories = ['60764', '60891', '60842', '60934']
         # for tm in same_categories:
@@ -99,12 +100,12 @@ class TMDataset(Dataset):
                 img_negative_tms = set(letter_tm_map[anchor_letter].keys()).intersection(negative_tms[anchor_tm])
                 if len(img_negative_tms) > 0:
                     if not unfold:
-                        self.image_list.append((positive_tms[anchor_tm], anchor, img_negative_tms))
+                        self.image_list.append((list(positive_tms[anchor_tm]), anchor, list(img_negative_tms)))
                         self.anchor_tms.append(anchor_tm)
                     else:
-                        for neg_tm in img_negative_tms:
-                            for pos_tm in set(positive_tms[anchor_tm]):
-                                self.image_list.append(([pos_tm], anchor, [neg_tm]))
+                        for neg_tm in misc.chunks(list(img_negative_tms), 2):
+                            for pos_tm in misc.chunks(list(positive_tms[anchor_tm]), 2):
+                                self.image_list.append((pos_tm, anchor, neg_tm))
                                 self.anchor_tms.append(anchor_tm)
         self.letter_tm_map = letter_tm_map
 
