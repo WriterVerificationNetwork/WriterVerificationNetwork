@@ -72,6 +72,7 @@ class Trainer:
         print("Training sets: {} images".format(len(dataset_train)))
         print("Validating sets: {} images".format(len(dataset_val)))
 
+        self._current_step = 0
         if not self._model.existing():
             self._train()
         self._model.load()
@@ -79,7 +80,6 @@ class Trainer:
         self._visualize(0.8, 1, "val_set")
 
     def _train(self):
-        self._current_step = 0
         self._last_save_time = time.time()
         best_val_loss = 99999
         for i_epoch in range(1, args.nepochs + 1):
