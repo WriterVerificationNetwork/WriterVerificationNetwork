@@ -132,18 +132,18 @@ class TMDataset(Dataset):
 
         should_flip = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
         should_mirror = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
-        img_anchor = get_image(os.path.join(self.gt_dir, anchor), self.transforms, is_bin_img=False,
+        img_anchor, origin_anc = get_image(os.path.join(self.gt_dir, anchor), self.transforms, is_bin_img=False,
                                mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        bin_anchor = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
-                               mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_anchor, _ = get_image(os.path.join(self.gt_binarized_dir, anchor), self.transforms, is_bin_img=True,
+                                  mov=moving_percent, flip=should_flip, mirror=should_mirror, org_img=origin_anc)
 
         # positive image
         moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(positive_img)
-        img_positive = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
+        img_positive, origin_pos = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        bin_positive = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
-                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_positive, _ = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
+                                    mov=moving_percent, flip=should_flip, mirror=should_mirror, org_img=origin_pos)
 
         should_replace = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
         if self.training_mode and should_replace:
@@ -152,10 +152,10 @@ class TMDataset(Dataset):
         # negative image
         moving_percent = random.randint(0, 10) / 10.
         img = os.path.basename(negative_img)
-        img_negative = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
+        img_negative, origin_neg = get_image(os.path.join(self.gt_dir, img), self.transforms, is_bin_img=False,
                                  mov=moving_percent, flip=should_flip, mirror=should_mirror)
-        bin_negative = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
-                                 mov=moving_percent, flip=should_flip, mirror=should_mirror)
+        bin_negative, _ = get_image(os.path.join(self.gt_binarized_dir, img), self.transforms, is_bin_img=True,
+                                    mov=moving_percent, flip=should_flip, mirror=should_mirror, org_img=origin_neg)
 
         should_replace = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
         if self.training_mode and should_replace:
@@ -177,7 +177,7 @@ class TMDataset(Dataset):
         return len(self.image_list)
 
 
-def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, mirror=False):
+def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, mirror=False, org_img=None):
     with Image.open(image_path) as img:
         # Resize image to make sure image size is smaller than page size
         width, height = img.size
@@ -199,6 +199,10 @@ def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, 
             padding_image = ImageOps.mirror(padding_image)
         # if is_bin_img:
         #     padding_image = padding_image.convert("L")
+        if org_img is not None and is_bin_img:
+            bin_img = np.asarray(padding_image) / 255.
+            padding_image = bin_img * np.asarray(org_img)
+            padding_image = Image.fromarray(padding_image.astype(np.uint8))
 
     # Transform image
     # if not is_bin_img:
@@ -207,4 +211,4 @@ def get_image(image_path, data_transform, is_bin_img=False, mov=0., flip=False, 
     #     img_tensor = torchvision.transforms.ToTensor()(padding_image)
     img_tensor = data_transform(padding_image)
 
-    return img_tensor
+    return img_tensor, padding_image
