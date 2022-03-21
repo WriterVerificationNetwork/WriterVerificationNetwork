@@ -22,7 +22,7 @@ class ResNet18(nn.Module):
         returned_layers = [1, 2, 3]
         return_layers = {f'layer{k}': str(v) for v, k in enumerate(returned_layers)}
         self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
-        self.pooling_layer = nn.AdaptiveMaxPool2d(1)
+        self.pooling_layer = nn.MaxPool2d(kernel_size=2, stride=2)
         self.up_scaling_1 = nn.Sequential(
             nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=(2, 2), stride=2),
             nn.BatchNorm2d(64),
@@ -45,7 +45,7 @@ class ResNet18(nn.Module):
         self.final_reconstruct = nn.Conv2d(in_channels=16, out_channels=3, kernel_size=(1, 1))
 
         self.symbol_embedding = nn.Sequential(
-            nn.Linear(4096, 128, bias=False),
+            nn.Linear(1024, 128, bias=False),
             nn.BatchNorm1d(128),
             nn.ReLU(),
             nn.Linear(128, 64)
@@ -58,11 +58,11 @@ class ResNet18(nn.Module):
         self.final_symbol = nn.Linear(64, numb_symbols)
 
         self.writer_footprint = nn.Sequential(
-            nn.Linear(4096, 1024, bias=False),
-            nn.BatchNorm1d(1024),
+            nn.Linear(1024, 512, bias=False),
+            nn.BatchNorm1d(512),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(1024, 128)
+            nn.Linear(512, 128)
         )
         self.dropout = nn.Dropout(dropout)
         self.symbol_footprint_projection = nn.Linear(144, 128)
@@ -84,6 +84,7 @@ class ResNet18(nn.Module):
 
         # Dimension reduction
         x = x['2']
+        x = self.pooling_layer(x)
         x = x.view(x.shape[0], -1)
 
         # Symbol recognizing
