@@ -115,7 +115,9 @@ class TMDataset(Dataset):
         anchor_letter = anchor.split("_")[0]
 
         positive_tm = random.choice(list(positive_tms))
-        positive_img = random.choice(self.letter_tm_map[anchor_letter][positive_tm])
+        positive_img = anchor_img
+        while positive_img == anchor_img:
+            positive_img = random.choice(self.letter_tm_map[anchor_letter][positive_tm])
         negative_tm = random.choice(list(negative_tms))
         negative_img = random.choice(self.letter_tm_map[anchor_letter][negative_tm])
 
