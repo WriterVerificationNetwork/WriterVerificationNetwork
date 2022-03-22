@@ -1,6 +1,8 @@
 from dataset import utils
 from model.inception_resnet import WriterVerificationNetwork
 from model.model_wrapper import ModelWrapper
+from model.resnet import ResNet18
+from model.simple_net import SimpleNetwork
 
 
 class ModelsFactory:
@@ -12,6 +14,12 @@ class ModelsFactory:
         if args.network == 'wvn_inception':
             model = WriterVerificationNetwork(numb_symbols=len(utils.letters), device=device, dropout=dropout,
                                               tasks=args.tasks)
+        elif args.network == 'simple_net':
+            model = SimpleNetwork(numb_symbols=len(utils.letters), device=device, dropout=dropout,
+                                              tasks=args.tasks)
+        elif args.network == 'resnet18':
+            model = ResNet18(numb_symbols=len(utils.letters), device=device, dropout=dropout,
+                                  tasks=args.tasks)
         else:
             raise NotImplementedError(f'Model {args.network} haven\'t implemented yet!!!')
 

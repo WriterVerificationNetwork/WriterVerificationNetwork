@@ -19,7 +19,7 @@ class BaseOptions:
         self._parser.add_argument('--optimizer', type=str, default='Adam')
         self._parser.add_argument('--cuda', action='store_true', help="Whether to use GPU")
         self._parser.add_argument('--network', type=str, default='wvn_inception')
-        self._parser.add_argument('--save_freq_s', type=int, default=30,
+        self._parser.add_argument('--save_freq_s', type=int, default=20,
                                   help='save the training losses to the summary writer every # seconds.')
         self._parser.add_argument('--n_threads_train', default=8, type=int, help='# threads for loading data')
         self._parser.add_argument('--n_threads_test', default=8, type=int, help='# threads for loading data')
@@ -32,6 +32,7 @@ class BaseOptions:
         self._parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
         self._parser.add_argument('--lr', type=float, default=6e-5,
                                   help="The initial learning rate")
+        self._parser.add_argument('--dropout', type=float, default=0.5, help="Default learning rate")
         self._parser.add_argument('--lr_policy', type=str, default='step', choices=['step'])
         self._parser.add_argument('--lr_decay_epochs', type=int, default=100,
                                   help='reduce the lr to 0.1*lr for every # epochs')

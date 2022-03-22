@@ -30,7 +30,7 @@ class Scheduler:
     def __init__(self):
         pass
     
-    def get( self, lr_scheduler: str, optimizer: torch.optim.Optimizer, step_size: int, gamma: float = 0.1):
+    def get( self, lr_scheduler: str, optimizer: torch.optim.Optimizer, step_size: int, gamma: float = 0.5):
         if lr_scheduler.lower() == 'step':
             scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size, gamma)
         elif lr_scheduler.lower() == 'none':
@@ -79,7 +79,7 @@ class Criterion:
         elif loss.lower() == 'l1' or loss.lower() == 'l1_loss':
             loss_func = nn.L1Loss(reduction=self.reduction)
         elif loss.lower() == 'triplet':
-            loss_func = nn.TripletMarginLoss(reduction=self.reduction)
+            loss_func = nn.TripletMarginLoss(reduction=self.reduction, margin=0.2)
         else:
             raise NotImplementedError(f'Loss {loss} hasn\'t implemented yet!!!')
 
