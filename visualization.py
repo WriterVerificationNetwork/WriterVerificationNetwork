@@ -1,22 +1,13 @@
-import csv
 import os
-import random
 
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
+import plotly.express as px
 import torch
+import wandb
+from sklearn.manifold import TSNE
 from tqdm import tqdm
 
-import wandb
-import seaborn as sns
-import matplotlib.pylab as plt
-from matplotlib import cm
-import torch.nn.functional as F
-from sklearn.manifold import TSNE
-
 from dataset.data_loader import WriterDataLoader
-from dataset.image_dataset import ImageDataset
 from dataset.tm_dataset import TMDataset
 from model.model_factory import ModelsFactory
 from options.test_options import TestOptions
@@ -55,7 +46,7 @@ class Trainer:
         self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=0.5)
         self._model.load_network(args.pretrained_model_path)
         transforms = get_transforms(args)
-        dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0.8,
+        dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0,
                                 split_to=1, unfold=False, min_n_sample_per_letter=args.min_n_sample_per_letter,
                                 min_n_sample_per_class=args.min_n_sample_per_class)
         self._model.init_losses('Val', use_weighted_loss=False, dataset=dataset_val)
@@ -76,37 +67,31 @@ class Trainer:
 
     def plot_fig(self, embeddings, tm_tensors, tm_to_idx, tsne_proj, n_item_to_plot):
 
-        fig, ax = plt.subplots(figsize=(12, 12))
         embedding_lens = [{'len': len(v), 'key': k} for k, v in embeddings.items()]
         embedding_lens = sorted(embedding_lens, key=lambda x: x['len'], reverse=True)
-
+        dfs = []
         for count, item in enumerate(embedding_lens[:n_item_to_plot]):
             idx = tm_to_idx[item['key']]
             indices = tm_tensors == idx
-            ax.scatter(tsne_proj[indices, 0], tsne_proj[indices, 1], c=colour_map[count],
-                       label=item['key'], alpha=0.5)
-        ax.legend(fontsize='small', markerscale=2, bbox_to_anchor=(1, 1))
+            x = tsne_proj[indices, 0]
+            df = pd.DataFrame.from_dict({
+                'x': x,
+                'y': tsne_proj[indices, 1],
+                'z': tsne_proj[indices, 2],
+                'colour': [colour_map[count] for _ in range(len(x))],
+                'labels': [item['key'] for _ in range(len(x))]
+            })
+            dfs.append(df)
+        dfs = pd.concat(dfs, ignore_index=True)
+        fig = px.scatter_3d(dfs,
+                            x='x', y='y', z='z',
+                            color='colour',
+                            hover_name='labels',
+                            opacity=0.5)
+        fig.update_traces(marker_size=12)
         vis_dir = os.path.join(args.vis_dir, args.name)
         os.makedirs(vis_dir, exist_ok=True)
-        plt.savefig(os.path.join(vis_dir, f'{n_item_to_plot}.png'))
-
-    def compute_tms_distances(self, embeddings, n_testing_items=10):
-        all_tms = list(embeddings.keys())
-        distance_func = torch.nn.MSELoss()
-        results = []
-        for i in range(len(all_tms)):
-            source_tm = all_tms[i]
-            for j in range(i + 1, len(all_tms)):
-                target_tm = all_tms[j]
-                distances = []
-                for _ in range(3 * n_testing_items):
-                    source_features = torch.stack(random.sample(embeddings[source_tm], n_testing_items))
-                    target_features = torch.stack(random.sample(embeddings[target_tm], n_testing_items))
-                    distances.append(distance_func(source_features, target_features))
-
-                avg_distance = sum(distances) / len(distances)
-                results.append({'source': source_tm, 'target': target_tm, 'distance': avg_distance.item()})
-        return results
+        fig.write_html(os.path.join(vis_dir, f'3D_plot_{n_item_to_plot}.html'))
 
     def _validate(self):
         # set model to eval
@@ -118,18 +103,10 @@ class Trainer:
             anchor_out, _ = self._model.compute_loss(input_data, criterion_mode='Val')
             footprints = anchor_out['footprint'].detach().cpu()
             for i, symbol in enumerate(train_batch['symbol']):
-                # symbol = symbol.item()
-                # if symbol not in embeddings:
-                #     embeddings[symbol] = {}
                 tm_anchor = train_batch['tm_anchor'][i]
                 if tm_anchor not in embeddings:
                     embeddings[tm_anchor] = []
                 embeddings[tm_anchor].append(footprints[i])
-        distance_data = self.compute_tms_distances(embeddings)
-        with open('tm_distance.csv', 'w') as f:
-            csv_file = csv.DictWriter(f, fieldnames=list(distance_data[0].keys()))
-            csv_file.writeheader()
-            csv_file.writerows(distance_data)
 
         tms = list(embeddings.keys())
         tm_to_idx = {x: i for i, x in enumerate(tms)}
@@ -138,33 +115,10 @@ class Trainer:
             tm_tensors += [tm_to_idx[tm] for _ in range(len(embeddings[tm]))]
             sym_embedding += embeddings[tm]
 
-        # tm_distance_matrix = np.zeros((len(sym_embedding), len(sym_embedding)))
-        # for tm1_idx, embedding_1 in enumerate(sym_embedding):
-        #     for tm2_idx, embedding_2 in enumerate(sym_embedding):
-        #         tm_distance_matrix[tm1_idx][tm2_idx] = F.mse_loss(embedding_1, embedding_2).item()
-        #
-        # mask = np.zeros_like(tm_distance_matrix)
-        # mask[np.triu_indices_from(mask)] = True
-        #
-        # with sns.axes_style("white"):
-        #     plt.figure(figsize=(11, 8))
-        #     ax = sns.heatmap(tm_distance_matrix, mask=mask, vmax=.3, square=True, cmap="YlGnBu")
-        #     plt.show()
-        #
-        # df = pd.DataFrame(tm_distance_matrix,
-        #                   columns=[idx_to_tm[tm_tensors[i]] for i in range(len(sym_embedding))],
-        #                   index=[idx_to_tm[tm_tensors[i]] for i in range(len(sym_embedding))])
-        # df.to_csv('distance_matrix.csv')
         footprints = torch.stack(sym_embedding, dim=0)
         tm_tensors = torch.tensor(tm_tensors)
-        tsne = TSNE(2, verbose=1)
+        tsne = TSNE(3, verbose=1)
         tsne_proj = tsne.fit_transform(footprints)
-        # Plot those points as a scatter plot and label them based on the pred labels
-
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 5)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 10)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 20)
-        self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 30)
         self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 50)
 
 
