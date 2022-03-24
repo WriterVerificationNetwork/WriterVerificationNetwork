@@ -1,5 +1,6 @@
 import copy
 import gc
+import os
 import random
 import time
 from io import BytesIO
@@ -52,6 +53,9 @@ class Trainer:
         wandb.config.update(args)
         device = torch.device('cuda' if args.cuda else 'cpu')
         self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=args.dropout)
+        if os.path.exists(args.pretrained_model_path):
+            print('Loading pretrained model: ' + args.pretrained_model_path)
+            self._model.load_network(args.pretrained_model_path)
         transforms = get_transforms(args)
         dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
                                   split_from=0, split_to=0.8, min_n_sample_per_letter=args.min_n_sample_per_letter,
