@@ -221,7 +221,7 @@ class Trainer:
         plt.close(fig)
         return cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
-    def compute_tms_distances(self, embeddings, n_testing_items=10):
+    def compute_tms_distances(self, embeddings, n_testing_items=7):
         all_tms = list(embeddings.keys())
         distance_func = torch.nn.MSELoss()
         results = {}
@@ -272,7 +272,7 @@ class Trainer:
                 if tm_anchor not in embeddings:
                     embeddings[tm_anchor] = []
                 embeddings[tm_anchor].append(footprints[i])
-        distance_data = self.compute_tms_distances(embeddings)
+        distance_data = self.compute_tms_distances(embeddings, n_testing_items=args.min_n_sample_per_class)
         distance_data = sorted(distance_data, key=lambda x: x['distance'])
         distance_table = wandb.Table(columns=['source', 'source_img', 'target', 'target_img', 'distance'])
         for item in distance_data:

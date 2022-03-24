@@ -47,8 +47,8 @@ class BaseOptions:
         self._parser.add_argument('--use_sampler', action='store_true', help='Enable using sampler')
         self._parser.add_argument('--nepochs', type=int, default=500)
         self._parser.add_argument('--early_stop', type=int, default=20)
-        self._parser.add_argument('--min_n_sample_per_letter', type=int, default=100)
-        self._parser.add_argument('--min_n_sample_per_class', type=int, default=25)
+        self._parser.add_argument('--min_n_sample_per_letter', type=int, default=7)
+        self._parser.add_argument('--min_n_sample_per_class', type=int, default=7)
         self._parser.add_argument('--pretrained_model_path', default = '', type=str,  help='Pretrained model')
 
         self._initialized = True
