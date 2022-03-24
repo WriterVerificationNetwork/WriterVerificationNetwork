@@ -247,10 +247,10 @@ class Trainer:
 
     def _visualize(self, split_from, split_to, viz_name):
         self._model.set_eval()
-        transforms = get_transforms(args)
+        transforms = val_transforms(args)
         dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
                                 split_from=split_from,
-                                split_to=split_to, unfold=False, min_n_sample_per_letter=args.min_n_sample_per_letter,
+                                split_to=split_to, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
                                 min_n_sample_per_class=args.min_n_sample_per_class)
         data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                            batch_size=args.batch_size)
@@ -267,7 +267,7 @@ class Trainer:
                 # if symbol not in embeddings:
                 #     embeddings[symbol] = {}
                 tm_anchor = train_batch['tm_anchor'][i]
-                if tm_anchor not in sample_imgs:
+                if tm_anchor not in sample_imgs or random.choice([0, 1]) == 1:
                     sample_imgs[tm_anchor] = copy.deepcopy(train_batch['img_anchor'][i].cpu())
                 if tm_anchor not in embeddings:
                     embeddings[tm_anchor] = []

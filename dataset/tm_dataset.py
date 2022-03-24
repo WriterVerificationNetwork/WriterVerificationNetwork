@@ -41,6 +41,8 @@ class TMDataset(Dataset):
             image_by_letter = sorted(image_by_letter)
             letter_tm_map[letter] = {}
             for img in image_by_letter:
+                if '_ex.png' in img:
+                    continue
                 width, height = imagesize.get(img)
                 if width < 32 and height < 32:
                     continue
@@ -129,12 +131,6 @@ class TMDataset(Dataset):
 
         anchor = os.path.basename(anchor_img)
         anchor_tm = anchor.split("_")[1]
-        if self.without_imgs:
-            return {
-                'symbol': letter_to_idx[anchor.split("_")[0]],
-                'anchor_path': anchor,
-                'tm_anchor': anchor_tm
-            }
 
         should_flip = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
         should_mirror = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
