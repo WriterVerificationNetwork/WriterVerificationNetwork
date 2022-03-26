@@ -79,7 +79,8 @@ class Trainer:
         self._current_step = 0
         if not self._model.existing() and not args.no_train:
             self._train()
-        self._model.load()
+        if self._model.existing():
+            self._model.load()
         self._visualize(0, 1, "all_data")
         self._visualize(0.8, 1, "val_set")
 
