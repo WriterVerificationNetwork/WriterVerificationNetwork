@@ -45,6 +45,7 @@ class BaseOptions:
         self._parser.add_argument('--bin_weight', type=float, default=5)
         self._parser.add_argument('--use_weighted_loss', action='store_true', help='Enable using weighted losses')
         self._parser.add_argument('--use_sampler', action='store_true', help='Enable using sampler')
+        self._parser.add_argument('--no_train', action='store_true', help='Disable training')
         self._parser.add_argument('--nepochs', type=int, default=500)
         self._parser.add_argument('--early_stop', type=int, default=20)
         self._parser.add_argument('--min_n_sample_per_letter', type=int, default=7)

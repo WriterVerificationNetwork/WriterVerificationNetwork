@@ -77,7 +77,7 @@ class Trainer:
         print("Validating sets: {} images".format(len(dataset_val)))
 
         self._current_step = 0
-        if not self._model.existing():
+        if not self._model.existing() and not args.no_train:
             self._train()
         self._model.load()
         self._visualize(0, 1, "all_data")
