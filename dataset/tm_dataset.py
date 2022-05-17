@@ -32,19 +32,23 @@ class TMDataset(Dataset):
         tm_map = {}
         letter_tm_map = {}
         total_imgs_removing_by_letter = 0
+        removed_imgs = []
         for letter in letters:
             image_by_letter = glob.glob(os.path.join(self.gt_dir, f'{letter}_*.png'))
             if len(image_by_letter) < min_n_sample_per_letter:
                 # Ignore if number of samples per letter is less than min_n_sample_per_letter
                 total_imgs_removing_by_letter += len(image_by_letter)
+                removed_imgs += image_by_letter
                 continue
             image_by_letter = sorted(image_by_letter)
             letter_tm_map[letter] = {}
             for img in image_by_letter:
                 if '_ex.png' in img:
+                    removed_imgs.append(img)
                     continue
                 width, height = imagesize.get(img)
                 if width < 32 and height < 32:
+                    removed_imgs.append(img)
                     continue
                 tm = os.path.basename(img).split("_")[1]
                 if tm not in tm_map:
@@ -95,8 +99,10 @@ class TMDataset(Dataset):
             for anchor in image_by_letter:
                 anchor_tm = os.path.basename(anchor).split("_")[1]
                 if anchor_tm in tm_filter:
+                    removed_imgs.append(anchor)
                     continue
                 if anchor_tm not in negative_tms:
+                    removed_imgs.append(anchor)
                     continue
                 anchor_letter = os.path.basename(anchor).split("_")[0]
                 img_negative_tms = set(letter_tm_map[anchor_letter].keys()).intersection(negative_tms[anchor_tm])
@@ -110,6 +116,12 @@ class TMDataset(Dataset):
                                 self.image_list.append((pos_tm, anchor, neg_tm))
                                 self.anchor_tms.append(anchor_tm)
         self.letter_tm_map = letter_tm_map
+        removed_imgs = set(removed_imgs)
+        with open('epsilon_removing.txt', 'w') as f:
+            for img in removed_imgs:
+                f.write(img.replace(self.gt_dir, '') + '\n')
+
+        print('fini')
 
     def __getitem__(self, idx):
         # anchor

@@ -6,7 +6,8 @@ from PIL import Image
 #            'χ', 'ψ', 'ω']
 
 # letters = ['α']
-letters = ['μ']
+# letters = ['μ']
+letters = ['ε']
 
 letter_to_idx = {x: i for i, x in enumerate(letters)}
 idx_to_letter = {i: x for i, x in enumerate(letters)}
