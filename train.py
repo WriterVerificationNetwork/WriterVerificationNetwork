@@ -7,7 +7,6 @@ from io import BytesIO
 
 import cv2
 import numpy as np
-import pandas as pd
 import torch
 import wandb
 from matplotlib import pyplot as plt
@@ -59,14 +58,15 @@ class Trainer:
         transforms = get_transforms(args)
         dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
                                   split_from=0, split_to=0.8, min_n_sample_per_letter=args.min_n_sample_per_letter,
-                                  min_n_sample_per_class=args.min_n_sample_per_class, training_mode=True, unfold=True)
+                                  min_n_sample_per_class=args.min_n_sample_per_class, training_mode=True,
+                                  unfold=True, letters=args.letters)
         self._model.init_losses('Train', args.use_weighted_loss, dataset_train)
         self.data_loader_train = WriterDataLoader(dataset_train, is_train=True, numb_threads=args.n_threads_train,
                                                   batch_size=args.batch_size, using_sampler=args.use_sampler)
         transforms = val_transforms(args)
         dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0.8,
                                 split_to=1, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
-                                min_n_sample_per_class=args.min_n_sample_per_class)
+                                min_n_sample_per_class=args.min_n_sample_per_class, letters=args.letters)
         self._model.init_losses('Val', use_weighted_loss=False, dataset=dataset_val)
         self.data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                                 batch_size=args.batch_size)
@@ -127,6 +127,7 @@ class Trainer:
         return res
 
     def _compute_loss(self, batch_data, log_data=False, n_log_items=10):
+        idx_to_letter = self.data_loader_val.dataset.idx_to_letter
         input_data = self.__get_data(batch_data, 'img_anchor', 'bin_anchor', 'symbol')
         anchor_out, anchor_losses = self._model.compute_loss(input_data)
         input_data = self.__get_data(batch_data, 'img_positive', 'bin_positive', 'symbol')
@@ -148,7 +149,7 @@ class Trainer:
             columns += ['pos_distance', 'neg_distance']
             wb_table = wandb.Table(columns=columns)
             log_prediction(wb_table, columns, batch_data, anchor_out, pos_out, neg_out,
-                           n_items=n_log_items, bin_weight=args.bin_weight)
+                           n_items=n_log_items, bin_weight=args.bin_weight, idx_to_letter=idx_to_letter)
             wandb.log({'val_prediction': wb_table}, step=self._current_step)
 
         accuracies = {}
@@ -252,7 +253,7 @@ class Trainer:
         dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
                                 split_from=split_from,
                                 split_to=split_to, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
-                                min_n_sample_per_class=args.min_n_sample_per_class)
+                                min_n_sample_per_class=args.min_n_sample_per_class, letters=args.letters)
         data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                            batch_size=args.batch_size)
         data_loader = data_loader_val.get_dataloader()

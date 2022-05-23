@@ -5,18 +5,17 @@ import random
 
 import imagesize
 import numpy as np
-import torchvision
 from PIL import Image, ImageOps
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from dataset.utils import resize_image, letters, MAX_WIDTH, MAX_HEIGHT, letter_to_idx
+from dataset.utils import resize_image, MAX_WIDTH, MAX_HEIGHT
 from utils import misc
 
 
 class TMDataset(Dataset):
 
-    def __init__(self, gt_dir, gt_binarized_dir, filter_file, transforms, split_from, split_to,
+    def __init__(self, gt_dir, gt_binarized_dir, filter_file, transforms, split_from, split_to, letters,
                  unfold=False, min_n_sample_per_letter=0, min_n_sample_per_class=0,
                  without_imgs=False, training_mode=False):
         # Init folder dir
@@ -123,6 +122,8 @@ class TMDataset(Dataset):
 
         print('fini')
 
+        self.letter_to_idx = {x: i for i, x in enumerate(letters)}
+
     def __getitem__(self, idx):
         # anchor
         positive_tms, anchor_img, negative_tms = self.image_list[idx]
@@ -187,7 +188,7 @@ class TMDataset(Dataset):
             img_negative = bin_negative
 
         return {
-            'symbol': letter_to_idx[anchor.split("_")[0]],
+            'symbol': self.letter_to_idx[anchor.split("_")[0]],
             'img_anchor': img_anchor,
             'anchor_path': anchor,
             'tm_anchor': anchor_tm,

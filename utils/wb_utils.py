@@ -1,8 +1,6 @@
 import torch
 import wandb
 from torch import nn
-
-from dataset.utils import idx_to_letter
 from utils.transform import reverse_transform
 
 
@@ -11,7 +9,7 @@ def wb_img(image):
 
 
 def log_prediction(wb_table, columns, batch_data, anchor_out, pos_out,
-                   neg_out, n_items, bin_weight):
+                   neg_out, n_items, bin_weight, idx_to_letter):
     res = {'id': [x for x in range(n_items)]}
     res['anchor'] = batch_data['img_anchor'][:n_items].cpu()
     if 'anchor_bin' in columns:

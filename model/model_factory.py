@@ -12,13 +12,13 @@ class ModelsFactory:
     @staticmethod
     def get_model(args, is_train, device, dropout=0.4):
         if args.network == 'wvn_inception':
-            model = WriterVerificationNetwork(numb_symbols=len(utils.letters), device=device, dropout=dropout,
+            model = WriterVerificationNetwork(numb_symbols=len(args.letters), device=device, dropout=dropout,
                                               tasks=args.tasks)
         elif args.network == 'simple_net':
-            model = SimpleNetwork(numb_symbols=len(utils.letters), device=device, dropout=dropout,
+            model = SimpleNetwork(numb_symbols=len(args.letters), device=device, dropout=dropout,
                                               tasks=args.tasks)
         elif args.network == 'resnet18':
-            model = ResNet18(numb_symbols=len(utils.letters), device=device, dropout=dropout,
+            model = ResNet18(numb_symbols=len(args.letters), device=device, dropout=dropout,
                                   tasks=args.tasks)
         else:
             raise NotImplementedError(f'Model {args.network} haven\'t implemented yet!!!')

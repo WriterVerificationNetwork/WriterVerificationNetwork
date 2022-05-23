@@ -7,10 +7,10 @@ from PIL import Image
 
 # letters = ['α']
 # letters = ['μ']
-letters = ['ε']
-
-letter_to_idx = {x: i for i, x in enumerate(letters)}
-idx_to_letter = {i: x for i, x in enumerate(letters)}
+# letters = ['ε']
+#
+# letter_to_idx = {x: i for i, x in enumerate(letters)}
+# idx_to_letter = {i: x for i, x in enumerate(letters)}
 
 MAX_WIDTH = 64
 MAX_HEIGHT = 64
