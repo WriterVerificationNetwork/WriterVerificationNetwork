@@ -105,7 +105,7 @@ class Trainer:
 
         lines = []
         for source in distance_matrix:
-            line = {}
+            line = {'#': source}
             for target in distance_matrix[source]:
                 line[target] = distance_matrix[source][target]
             lines.append(line)
@@ -114,7 +114,7 @@ class Trainer:
         matrix_file = os.path.join(vis_dir, 'distance_matrix_TM.csv')
         os.makedirs(os.path.dirname(matrix_file), exist_ok=True)
         with open(matrix_file, 'w') as f:
-            writer = csv.DictWriter(f, distance_matrix.keys())
+            writer = csv.DictWriter(f, sorted(distance_matrix.keys()))
             writer.writeheader()
             writer.writerows(lines)
 
