@@ -49,7 +49,7 @@ class Trainer:
         self._model.load_network(args.pretrained_model_path)
         transforms = get_transforms(args)
         dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0,
-                                split_to=1, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
+                                split_to=1, unfold=False, min_n_sample_per_letter=args.min_n_sample_per_letter,
                                 min_n_sample_per_class=args.min_n_sample_per_class, letters=args.letters)
         self._model.init_losses('Val', use_weighted_loss=False, dataset=dataset_val)
         self.data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
