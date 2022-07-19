@@ -11,6 +11,7 @@ import torch
 import wandb
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
+from torch.utils.data import ConcatDataset
 from tqdm import tqdm
 
 from dataset.data_loader import WriterDataLoader
@@ -56,17 +57,28 @@ class Trainer:
             print('Loading pretrained model: ' + args.pretrained_model_path)
             self._model.load_network(args.pretrained_model_path)
         transforms = get_transforms(args)
-        dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
-                                  split_from=0, split_to=0.8, min_n_sample_per_letter=args.min_n_sample_per_letter,
-                                  min_n_sample_per_class=args.min_n_sample_per_class, training_mode=True,
-                                  unfold=True, letters=args.letters)
+        datasets = []
+        letter_to_idx = {x: i for i, x in enumerate(args.letters)}
+        self.letter_to_idx = letter_to_idx
+        for letter, filter_file in zip(args.letters, args.filter_files):
+            dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, filter_file, letter_to_idx, transforms,
+                                      split_from=0, split_to=0.8, min_n_sample_per_letter=args.min_n_sample_per_letter,
+                                      min_n_sample_per_class=args.min_n_sample_per_class, training_mode=True,
+                                      unfold=True, letters=[letter])
+            datasets.append(dataset_train)
+        dataset_train = ConcatDataset(datasets)
         self._model.init_losses('Train', args.use_weighted_loss, dataset_train)
         self.data_loader_train = WriterDataLoader(dataset_train, is_train=True, numb_threads=args.n_threads_train,
                                                   batch_size=args.batch_size, using_sampler=args.use_sampler)
         transforms = val_transforms(args)
-        dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms, split_from=0.8,
-                                split_to=1, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
-                                min_n_sample_per_class=args.min_n_sample_per_class, letters=args.letters)
+        val_datasets = []
+        for letter, filter_file in zip(args.letters, args.filter_files):
+            dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, filter_file, letter_to_idx,
+                                    transforms, split_from=0.8,
+                                    split_to=1, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
+                                    min_n_sample_per_class=args.min_n_sample_per_class, letters=[letter])
+            val_datasets.append(dataset_val)
+        dataset_val = ConcatDataset(val_datasets)
         self._model.init_losses('Val', use_weighted_loss=False, dataset=dataset_val)
         self.data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                                 batch_size=args.batch_size)
@@ -127,7 +139,6 @@ class Trainer:
         return res
 
     def _compute_loss(self, batch_data, log_data=False, n_log_items=10):
-        idx_to_letter = self.data_loader_val.dataset.idx_to_letter
         input_data = self.__get_data(batch_data, 'img_anchor', 'bin_anchor', 'symbol')
         anchor_out, anchor_losses = self._model.compute_loss(input_data)
         input_data = self.__get_data(batch_data, 'img_positive', 'bin_positive', 'symbol')
@@ -149,7 +160,7 @@ class Trainer:
             columns += ['pos_distance', 'neg_distance']
             wb_table = wandb.Table(columns=columns)
             log_prediction(wb_table, columns, batch_data, anchor_out, pos_out, neg_out,
-                           n_items=n_log_items, bin_weight=args.bin_weight, idx_to_letter=idx_to_letter)
+                           n_items=n_log_items, bin_weight=args.bin_weight, idx_to_letter=self.idx_to_letter)
             wandb.log({'val_prediction': wb_table}, step=self._current_step)
 
         accuracies = {}
@@ -250,10 +261,14 @@ class Trainer:
     def _visualize(self, split_from, split_to, viz_name):
         self._model.set_eval()
         transforms = val_transforms(args)
-        dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, args.filter_file, transforms,
-                                split_from=split_from,
-                                split_to=split_to, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
-                                min_n_sample_per_class=args.min_n_sample_per_class, letters=args.letters)
+        val_datasets = []
+        for letter, filter_file in zip(args.letters, args.filter_files):
+            dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, filter_file, self.letter_to_idx, transforms,
+                                    split_from=split_from,
+                                    split_to=split_to, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
+                                    min_n_sample_per_class=args.min_n_sample_per_class, letters=[letter])
+            val_datasets.append(dataset_val)
+        dataset_val = ConcatDataset(val_datasets)
         data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
                                            batch_size=args.batch_size)
         data_loader = data_loader_val.get_dataloader()

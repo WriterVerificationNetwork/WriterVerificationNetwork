@@ -15,7 +15,7 @@ from utils import misc
 
 class TMDataset(Dataset):
 
-    def __init__(self, gt_dir, gt_binarized_dir, filter_file, transforms, split_from, split_to, letters,
+    def __init__(self, gt_dir, gt_binarized_dir, filter_file, letter_to_idx, transforms, split_from, split_to, letters,
                  unfold=False, min_n_sample_per_letter=0, min_n_sample_per_class=0,
                  without_imgs=False, training_mode=False):
         # Init folder dir
@@ -115,14 +115,7 @@ class TMDataset(Dataset):
                                 self.image_list.append((pos_tm, anchor, neg_tm))
                                 self.anchor_tms.append(anchor_tm)
         self.letter_tm_map = letter_tm_map
-        removed_imgs = set(removed_imgs)
-        with open('epsilon_removing.txt', 'w') as f:
-            for img in removed_imgs:
-                f.write(img.replace(self.gt_dir, '') + '\n')
-
-        print('fini')
-
-        self.letter_to_idx = {x: i for i, x in enumerate(letters)}
+        self.letter_to_idx = letter_to_idx
 
     def __getitem__(self, idx):
         # anchor

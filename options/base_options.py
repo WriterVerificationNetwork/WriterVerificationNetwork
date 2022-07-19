@@ -13,7 +13,9 @@ class BaseOptions:
     def initialize(self):
         self._parser.add_argument('--gt_dir', type=str, help='Path to ground truth images')
         self._parser.add_argument('--gt_binarized_dir', type=str, help='Path to ground truth binarized images')
-        self._parser.add_argument('--filter_file', type=str, help='Path to the negative filter file')
+        self._parser.add_argument('--filter_files', type=str, default=[], nargs="+",
+                                  help='Path to the negative filter files')
+        self._parser.add_argument('--letters', type=str, default=['α', 'ε', 'μ'], nargs="+")
         self._parser.add_argument('--image_size', type=int, default=160, help='Input image size')
         self._parser.add_argument('--batch_size', type=int, default=64, help='Input batch size')
         self._parser.add_argument('--optimizer', type=str, default='Adam')
@@ -41,9 +43,6 @@ class BaseOptions:
         self._parser.add_argument('--weight_decay', type=float, default=0., help='weight decay')
         self._parser.add_argument('--tasks', type=str, default=['reconstruct', 'symbol', 'footprint'], nargs="+")
         self._parser.add_argument('--criterion', type=str, default=['mae', 'ce', 'triplet'], nargs="+")
-        self._parser.add_argument('--letters', type=str, default=['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ',
-                                                                  'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'ϲ',
-                                                                  'τ', 'υ', 'φ', 'χ', 'ψ', 'ω'], nargs="+")
         self._parser.add_argument('--lambda_task', type=float, default=[1, 1, 1], nargs="+")
         self._parser.add_argument('--bin_weight', type=float, default=5)
         self._parser.add_argument('--use_weighted_loss', action='store_true', help='Enable using weighted losses')
