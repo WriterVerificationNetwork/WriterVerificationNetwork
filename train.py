@@ -58,10 +58,11 @@ class Trainer:
             self._model.load_network(args.pretrained_model_path)
         transforms = get_transforms(args)
         datasets = []
-        letter_to_idx = {x: i for i, x in enumerate(args.letters)}
-        self.letter_to_idx = letter_to_idx
+        self.letter_to_idx = {x: i for i, x in enumerate(args.letters)}
+        self.idx_to_letter = args.letters
+
         for letter, filter_file in zip(args.letters, args.filter_files):
-            dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, filter_file, letter_to_idx, transforms,
+            dataset_train = TMDataset(args.gt_dir, args.gt_binarized_dir, filter_file, self.letter_to_idx, transforms,
                                       split_from=0, split_to=0.8, min_n_sample_per_letter=args.min_n_sample_per_letter,
                                       min_n_sample_per_class=args.min_n_sample_per_class, training_mode=True,
                                       unfold=True, letters=[letter])
@@ -73,7 +74,7 @@ class Trainer:
         transforms = val_transforms(args)
         val_datasets = []
         for letter, filter_file in zip(args.letters, args.filter_files):
-            dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, filter_file, letter_to_idx,
+            dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, filter_file, self.letter_to_idx,
                                     transforms, split_from=0.8,
                                     split_to=1, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
                                     min_n_sample_per_class=args.min_n_sample_per_class, letters=[letter])
