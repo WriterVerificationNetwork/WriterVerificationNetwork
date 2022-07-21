@@ -75,12 +75,12 @@ class TMDataset(Dataset):
                 continue
             for second_item in item['relations']:
                 second_tm = second_item['category']
+                if current_tm == '' or second_tm == '':
+                    continue
                 if second_tm not in tm_map:
                     print(f'TM {second_tm} is not available on the training dataset')
                     continue
                 relationship = second_item['relationship']
-                if current_tm == '' or second_tm == '':
-                    continue
                 if relationship == 4:
                     negative_tms[current_tm].add(second_tm)
                     negative_tms[second_tm].add(current_tm)
@@ -110,8 +110,8 @@ class TMDataset(Dataset):
                         self.image_list.append((list(positive_tms[anchor_tm]), anchor, list(img_negative_tms)))
                         self.anchor_tms.append(anchor_tm)
                     else:
-                        for neg_tm in misc.chunks(list(img_negative_tms), 2):
-                            for pos_tm in misc.chunks(list(positive_tms[anchor_tm]), 2):
+                        for neg_tm in misc.chunks(list(img_negative_tms), 4):
+                            for pos_tm in misc.chunks(list(positive_tms[anchor_tm]), 4):
                                 self.image_list.append((pos_tm, anchor, neg_tm))
                                 self.anchor_tms.append(anchor_tm)
         self.letter_tm_map = letter_tm_map
@@ -138,11 +138,10 @@ class TMDataset(Dataset):
         anchor = os.path.basename(anchor_img)
         anchor_tm = anchor.split("_")[1]
 
-        should_flip = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
-        should_mirror = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
-        if not self.training_mode:
-            should_flip = False
-            should_mirror = False
+        # should_flip = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
+        # should_mirror = np.random.choice(np.arange(0, 2), p=[1 - 0.5, 0.5])
+        should_flip = False
+        should_mirror = False
 
         img_anchor, origin_anc = get_image(os.path.join(self.gt_dir, anchor), self.transforms, is_bin_img=False,
                                mov=moving_percent, flip=should_flip, mirror=should_mirror)

@@ -79,7 +79,7 @@ class Criterion:
         elif loss.lower() == 'l1' or loss.lower() == 'l1_loss':
             loss_func = nn.L1Loss(reduction=self.reduction)
         elif loss.lower() == 'triplet':
-            loss_func = nn.TripletMarginLoss(reduction=self.reduction, margin=0.2)
+            loss_func = nn.TripletMarginLoss(reduction=self.reduction, margin=0.4)
         else:
             raise NotImplementedError(f'Loss {loss} hasn\'t implemented yet!!!')
 
