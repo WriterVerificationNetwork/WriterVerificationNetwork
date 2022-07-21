@@ -262,66 +262,60 @@ class Trainer:
     def _visualize(self, split_from, split_to, viz_name):
         self._model.set_eval()
         transforms = val_transforms(args)
-        val_datasets = []
         for letter, filter_file in zip(args.letters, args.filter_files):
             dataset_val = TMDataset(args.gt_dir, args.gt_binarized_dir, filter_file, self.letter_to_idx, transforms,
                                     split_from=split_from,
                                     split_to=split_to, unfold=True, min_n_sample_per_letter=args.min_n_sample_per_letter,
                                     min_n_sample_per_class=args.min_n_sample_per_class, letters=[letter])
-            val_datasets.append(dataset_val)
-        dataset_val = ConcatDataset(val_datasets)
-        data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
-                                           batch_size=args.batch_size)
-        data_loader = data_loader_val.get_dataloader()
-        embeddings = {}
-        sample_imgs = {}
-        for train_batch in tqdm(data_loader):
+            data_loader_val = WriterDataLoader(dataset_val, is_train=False, numb_threads=args.n_threads_train,
+                                               batch_size=args.batch_size)
+            data_loader = data_loader_val.get_dataloader()
+            embeddings = {}
+            sample_imgs = {}
+            for train_batch in tqdm(data_loader):
 
-            input_data = self.__get_data(train_batch, 'img_anchor', 'bin_anchor', 'symbol')
-            anchor_out, _ = self._model.compute_loss(input_data, criterion_mode='Val')
-            footprints = anchor_out['footprint'].detach().cpu()
-            for i, symbol in enumerate(train_batch['symbol']):
-                # symbol = symbol.item()
-                # if symbol not in embeddings:
-                #     embeddings[symbol] = {}
-                tm_anchor = train_batch['tm_anchor'][i]
-                if tm_anchor not in sample_imgs or random.choice([0, 1]) == 1:
-                    sample_imgs[tm_anchor] = copy.deepcopy(train_batch['img_anchor'][i].cpu())
-                if tm_anchor not in embeddings:
-                    embeddings[tm_anchor] = []
-                embeddings[tm_anchor].append(footprints[i])
-        distance_data = self.compute_tms_distances(embeddings, n_testing_items=args.min_n_sample_per_class)
-        distance_data = sorted(distance_data, key=lambda x: x['distance'])
-        distance_table = wandb.Table(columns=['source', 'source_img', 'target', 'target_img', 'distance'])
-        for item in distance_data:
-            distance_table.add_data(item['source'], wb_img(sample_imgs[item['source']]),
-                                    item['target'], wb_img(sample_imgs[item['target']]),
-                                    item['distance'])
-        wandb.log({f'distance_{viz_name}': distance_table}, step=self._current_step)
+                input_data = self.__get_data(train_batch, 'img_anchor', 'bin_anchor', 'symbol')
+                anchor_out, _ = self._model.compute_loss(input_data, criterion_mode='Val')
+                footprints = anchor_out['footprint'].detach().cpu()
+                for i, symbol in enumerate(train_batch['symbol']):
+                    tm_anchor = train_batch['tm_anchor'][i]
+                    if tm_anchor not in sample_imgs or random.choice([0, 1]) == 1:
+                        sample_imgs[tm_anchor] = copy.deepcopy(train_batch['img_anchor'][i].cpu())
+                    if tm_anchor not in embeddings:
+                        embeddings[tm_anchor] = []
+                    embeddings[tm_anchor].append(footprints[i])
+            distance_data = self.compute_tms_distances(embeddings, n_testing_items=args.min_n_sample_per_class)
+            distance_data = sorted(distance_data, key=lambda x: x['distance'])
+            distance_table = wandb.Table(columns=['source', 'source_img', 'target', 'target_img', 'distance'])
+            for item in distance_data:
+                distance_table.add_data(item['source'], wb_img(sample_imgs[item['source']]),
+                                        item['target'], wb_img(sample_imgs[item['target']]),
+                                        item['distance'])
+            wandb.log({f'distance_{letter}_{viz_name}': distance_table}, step=self._current_step)
 
-        tms = list(embeddings.keys())
-        tm_to_idx = {x: i for i, x in enumerate(tms)}
-        sym_embedding, tm_tensors = [], []
-        for tm in embeddings:
-            tm_tensors += [tm_to_idx[tm] for _ in range(len(embeddings[tm]))]
-            sym_embedding += embeddings[tm]
+            tms = list(embeddings.keys())
+            tm_to_idx = {x: i for i, x in enumerate(tms)}
+            sym_embedding, tm_tensors = [], []
+            for tm in embeddings:
+                tm_tensors += [tm_to_idx[tm] for _ in range(len(embeddings[tm]))]
+                sym_embedding += embeddings[tm]
 
-        footprints = torch.stack(sym_embedding, dim=0)
-        tm_tensors = torch.tensor(tm_tensors)
-        tsne = TSNE(2, verbose=1)
-        tsne_proj = tsne.fit_transform(footprints)
-        # Plot those points as a scatter plot and label them based on the pred labels
+            footprints = torch.stack(sym_embedding, dim=0)
+            tm_tensors = torch.tensor(tm_tensors)
+            tsne = TSNE(2, verbose=1)
+            tsne_proj = tsne.fit_transform(footprints)
+            # Plot those points as a scatter plot and label them based on the pred labels
 
-        tm_5 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 5)
-        tm_10 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 10)
-        tm_20 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 20)
-        tm_30 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 30)
-        tm_50 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 50)
-        columns = ['5TMs', '10TMs', '20TMs', '30TMs', '50TMs']
-        wb_table = wandb.Table(columns=columns)
-        wb_table.add_data(wandb.Image(tm_5), wandb.Image(tm_10), wandb.Image(tm_20), wandb.Image(tm_30),
-                          wandb.Image(tm_50))
-        wandb.log({f'{viz_name}': wb_table}, step=self._current_step)
+            tm_5 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 5)
+            tm_10 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 10)
+            tm_20 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 20)
+            tm_30 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 30)
+            tm_50 = self.plot_fig(embeddings, tm_tensors, tm_to_idx, tsne_proj, 50)
+            columns = ['5TMs', '10TMs', '20TMs', '30TMs', '50TMs']
+            wb_table = wandb.Table(columns=columns)
+            wb_table.add_data(wandb.Image(tm_5), wandb.Image(tm_10), wandb.Image(tm_20), wandb.Image(tm_30),
+                              wandb.Image(tm_50))
+            wandb.log({f'tsne_{letter}_{viz_name}': wb_table}, step=self._current_step)
 
     def _validate(self, i_epoch, val_loader, mode='val'):
         val_start_time = time.time()
