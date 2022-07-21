@@ -68,17 +68,18 @@ class TMDataset(Dataset):
         with open(filter_file) as f:
             triplet_filter = json.load(f)
 
+        missing_tm = set([])
         for item in triplet_filter['relations']:
             current_tm = item['category']
             if current_tm not in tm_map:
-                print(f'TM {current_tm} is not available on the training dataset')
+                missing_tm.add(current_tm)
                 continue
             for second_item in item['relations']:
                 second_tm = second_item['category']
                 if current_tm == '' or second_tm == '':
                     continue
                 if second_tm not in tm_map:
-                    print(f'TM {second_tm} is not available on the training dataset')
+                    missing_tm.add(second_tm)
                     continue
                 relationship = second_item['relationship']
                 if relationship == 4:
@@ -87,6 +88,9 @@ class TMDataset(Dataset):
                 if relationship == 1:
                     positive_tms[current_tm].add(second_tm)
                     positive_tms[second_tm].add(current_tm)
+
+        for current_tm in missing_tm:
+            print(f'TM {current_tm} is not available on the training dataset')
 
         # same_categories = ['60764', '60891', '60842', '60934']
         # for tm in same_categories:
@@ -110,8 +114,8 @@ class TMDataset(Dataset):
                         self.image_list.append((list(positive_tms[anchor_tm]), anchor, list(img_negative_tms)))
                         self.anchor_tms.append(anchor_tm)
                     else:
-                        for neg_tm in misc.chunks(list(img_negative_tms), 4):
-                            for pos_tm in misc.chunks(list(positive_tms[anchor_tm]), 4):
+                        for neg_tm in misc.chunks(list(img_negative_tms), max(len(img_negative_tms) // 3, 1)):
+                            for pos_tm in misc.chunks(list(positive_tms[anchor_tm]), max(len(positive_tms[anchor_tm]) // 3, 1)):
                                 self.image_list.append((pos_tm, anchor, neg_tm))
                                 self.anchor_tms.append(anchor_tm)
         self.letter_tm_map = letter_tm_map
