@@ -291,7 +291,9 @@ class Trainer:
                 distance_table.add_data(item['source'], wb_img(sample_imgs[item['source']]),
                                         item['target'], wb_img(sample_imgs[item['target']]),
                                         item['distance'])
-            wandb.log({f'distance_{letter}_{viz_name}': distance_table}, step=self._current_step)
+
+            letter_idx = self.letter_to_idx[letter]
+            wandb.log({f'distance_{letter_idx}_{viz_name}': distance_table}, step=self._current_step)
 
             tms = list(embeddings.keys())
             tm_to_idx = {x: i for i, x in enumerate(tms)}
@@ -315,7 +317,7 @@ class Trainer:
             wb_table = wandb.Table(columns=columns)
             wb_table.add_data(wandb.Image(tm_5), wandb.Image(tm_10), wandb.Image(tm_20), wandb.Image(tm_30),
                               wandb.Image(tm_50))
-            wandb.log({f'tsne_{letter}_{viz_name}': wb_table}, step=self._current_step)
+            wandb.log({f'tsne_{letter_idx}_{viz_name}': wb_table}, step=self._current_step)
 
     def _validate(self, i_epoch, val_loader, mode='val'):
         val_start_time = time.time()
